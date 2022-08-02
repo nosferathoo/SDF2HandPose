@@ -1,8 +1,5 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.VFX;
 using UnityEngine.VFX.SDF;
@@ -11,7 +8,6 @@ public class SDFUpdater : MonoBehaviour
 {
     public Vector3 sizeBox;
     public int maxResolution;
-    public MeshFilter sampleMesh;
 
     public VisualEffect vfx;
 
@@ -63,14 +59,15 @@ public class SDFUpdater : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        for (int i = 0; i < _meshFilters.Count; ++i)
+        for (var i = 0; i < _meshFilters.Count; ++i)
         {
             _mat[i] = transform.localToWorldMatrix.inverse * _meshFilters[i].transform.localToWorldMatrix;
         }
         
         _baker.Reinit(sizeBox,Vector3.zero,maxResolution,_meshes,_mat);
         _baker.BakeSDF();
-        vfx.SetTexture("SDF",_baker.SdfTexture);
+        
+        vfx?.SetTexture("SDF",_baker.SdfTexture);
     }
 
     private void OnDestroy()
