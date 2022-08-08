@@ -9,7 +9,7 @@ tap Close Hand button in SDFHand script.
 
 
 
-Known issues/future improvements:
+**Known issues/future improvements:**
 * Closing of hand will not work if Game Tab is not visible
 * SDF don't need to be updated every frame - it can be used once just before the hand closing
 * SDF baking/slicking/etc can be probably done in Coroutine and split between several WaitForEndOfFrame to not dip down performance
