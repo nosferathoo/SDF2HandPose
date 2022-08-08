@@ -1,5 +1,4 @@
 # SDF2HandPose
-# SDF2HandPose
 
 Proof-of-concept project showing usage of SDF 3D texture as input for VR Hand Posing.
 Currently it only works using editor buttons on SDFHand script just to show off.
