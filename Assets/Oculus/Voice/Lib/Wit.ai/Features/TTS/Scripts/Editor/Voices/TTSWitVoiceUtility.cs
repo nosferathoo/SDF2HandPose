@@ -1,5 +1,6 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * All rights reserved.
  *
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
@@ -15,7 +16,6 @@ using Facebook.WitAi.Lib;
 using Facebook.WitAi.TTS.Utilities;
 using Facebook.WitAi.Data.Configuration;
 using Facebook.WitAi.TTS.Integrations;
-using UnityEngine.Networking;
 
 namespace Facebook.WitAi.TTS.Editor.Voices
 {

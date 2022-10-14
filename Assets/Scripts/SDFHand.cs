@@ -1,23 +1,19 @@
-using System;
 using System.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
 
-public class SDFHand : MonoBehaviour
+public class SDFHand : BaseHand
 {
-    [SerializeField] private SDFFinger[] fingers;
+    [SerializeField] private Finger[] fingers;
     [SerializeField] private float alphaStep = 0.01f;
     [SerializeField] private float minTipDistance = 0.01f;
     [SerializeField] private SDFUpdater sdfUpdater;
-
-    private WaitForEndOfFrame _wfeof = new WaitForEndOfFrame();
     private void OnValidate()
     {
-        fingers = GetComponentsInChildren<SDFFinger>();
+        fingers = GetComponentsInChildren<Finger>();
         sdfUpdater = GetComponentInChildren<SDFUpdater>();
     }
 
-    public void OpenHand()
+    public override void OpenHand()
     {
         foreach (var finger in fingers)
         {  
@@ -25,26 +21,20 @@ public class SDFHand : MonoBehaviour
         }
     }
 
-    public void CloseHand()
+    protected override void CloseHand2()
     {
-        StopAllCoroutines();
-        OpenHand();
-        StartCoroutine(CloseHand2());
-    }
-    
-    private IEnumerator CloseHand2()
-    {
-        for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
+        sdfUpdater.UpdateSDF();
+        foreach (var finger in fingers)
         {
-            foreach (var finger in fingers)
+            for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
             {
-                if (sdfUpdater.ProbeSDFTexture(finger.Pad.position) > minTipDistance)
+                finger.Squish = alpha;
+                
+                if (sdfUpdater.ProbeSDFTexture(finger.Pad.position) < minTipDistance)
                 {
-                    finger.Squish = alpha;
+                    break;
                 }
             }
-
-            yield return _wfeof;
         }
     }
 }

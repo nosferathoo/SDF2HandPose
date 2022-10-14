@@ -95,7 +95,7 @@ namespace Oculus.Voice.Demo.BuiltInDemo
         {
             if (_timerExist)
             {
-                Log("A timer already exist.");
+                Debug.LogWarning("A timer already exist.");
                 return;
             }
 
@@ -104,10 +104,6 @@ namespace Oculus.Voice.Demo.BuiltInDemo
                 _timerExist = true;
                 _timerRunning = true;
                 Log($"Countdown Timer is set for {entityValues[0]} {entityValues[1]}(s).");
-            }
-            else
-            {
-                Log("Error in CreateTimer(): Could not parse wit reply.");
             }
         }
 
@@ -118,7 +114,7 @@ namespace Oculus.Voice.Demo.BuiltInDemo
         {
             // Show the remaining time of the countdown timer.
             var msg = GetFormattedTimeFromSeconds();
-            Log(msg);
+            //Log(msg);
         }
 
         /// <summary>

@@ -47,7 +47,6 @@ public class OVRDeviceSelector
 			OVRProjectConfig projectConfig = OVRProjectConfig.GetProjectConfig();
 			return projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest);
 #endif
-
 		}
 	}
 
@@ -65,4 +64,5 @@ public class OVRDeviceSelector
 #endif
 		}
 	}
+
 }

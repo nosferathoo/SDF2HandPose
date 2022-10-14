@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using Oculus.VR.Editor;
 using UnityEngine;
 using UnityEditor;
 
@@ -38,6 +39,7 @@ public class OVRProjectConfigEditor : Editor
 	{
 		// Target Devices
 		EditorGUILayout.LabelField("Target Devices", EditorStyles.boldLabel);
+		bool useOculusXRSettings = false;
 #if PRIORITIZE_OCULUS_XR_SETTINGS
 		EditorGUILayout.BeginHorizontal();
 		EditorGUILayout.LabelField("Configure Target Devices in Oculus XR Plugin Settings.", GUILayout.Width(320));
@@ -45,30 +47,33 @@ public class OVRProjectConfigEditor : Editor
 		if (GUILayout.Button("Open Settings"))
 				SettingsService.OpenProjectSettings("Project/XR Plug-in Management/Oculus");
 		EditorGUILayout.EndHorizontal();
-#else
-		bool hasModified = false;
-
-		foreach (OVRProjectConfig.DeviceType deviceType in System.Enum.GetValues(typeof(OVRProjectConfig.DeviceType)))
-		{
-			bool oldSupportsDevice = projectConfig.targetDeviceTypes.Contains(deviceType);
-			bool newSupportsDevice = oldSupportsDevice;
-			OVREditorUtil.SetupBoolField(projectConfig, ObjectNames.NicifyVariableName(deviceType.ToString()), ref newSupportsDevice, ref hasModified);
-
-			if (newSupportsDevice && !oldSupportsDevice)
-			{
-				projectConfig.targetDeviceTypes.Add(deviceType);
-			}
-			else if (oldSupportsDevice && !newSupportsDevice)
-			{
-				projectConfig.targetDeviceTypes.Remove(deviceType);
-			}
-		}
-
-		if (hasModified)
-		{
-			OVRProjectConfig.CommitProjectConfig(projectConfig);
-		}
+		useOculusXRSettings = true;
 #endif
+		if (!useOculusXRSettings)
+		{
+			bool hasModified = false;
+
+			foreach (OVRProjectConfig.DeviceType deviceType in System.Enum.GetValues(typeof(OVRProjectConfig.DeviceType)))
+			{
+				bool oldSupportsDevice = projectConfig.targetDeviceTypes.Contains(deviceType);
+				bool newSupportsDevice = oldSupportsDevice;
+				OVREditorUtil.SetupBoolField(projectConfig, ObjectNames.NicifyVariableName(deviceType.ToString()), ref newSupportsDevice, ref hasModified);
+
+				if (newSupportsDevice && !oldSupportsDevice)
+				{
+					projectConfig.targetDeviceTypes.Add(deviceType);
+				}
+				else if (oldSupportsDevice && !newSupportsDevice)
+				{
+					projectConfig.targetDeviceTypes.Remove(deviceType);
+				}
+			}
+
+			if (hasModified)
+			{
+				OVRProjectConfig.CommitProjectConfig(projectConfig);
+			}
+		}
 	}
 
 	enum eProjectConfigTab
@@ -123,7 +128,7 @@ public class OVRProjectConfigEditor : Editor
 				OVREditorUtil.SetupEnumField(projectConfig, "Hand Tracking Version", ref projectConfig.handTrackingVersion, ref hasModified);
 
 				// Enable Render Model Support
-				bool renderModelSupportAvailable = OVRPluginUpdater.IsOVRPluginOpenXRActivated();
+				bool renderModelSupportAvailable = OVRPluginInfo.IsOVRPluginOpenXRActivated();
 				EditorGUI.BeginDisabledGroup(!renderModelSupportAvailable);
 				if (!renderModelSupportAvailable)
 				{
@@ -144,7 +149,7 @@ public class OVRProjectConfigEditor : Editor
 					ref projectConfig.requiresSystemKeyboard, ref hasModified);
 
 				// Tracked Keyboard Support
-				bool trackedKeyboardSupportAvailable = OVRPluginUpdater.IsOVRPluginOpenXRActivated();
+				bool trackedKeyboardSupportAvailable = OVRPluginInfo.IsOVRPluginOpenXRActivated();
 				EditorGUI.BeginDisabledGroup(!trackedKeyboardSupportAvailable);
 				if (!trackedKeyboardSupportAvailable)
 				{
@@ -161,7 +166,7 @@ public class OVRProjectConfigEditor : Editor
 				{
 					projectConfig.renderModelSupport = OVRProjectConfig.RenderModelSupport.Enabled;
 				}
-				if (!OVRPluginUpdater.IsOVRPluginOpenXRActivated())
+				if (!OVRPluginInfo.IsOVRPluginOpenXRActivated())
 				{
 					EditorGUILayout.HelpBox(
 						"The OpenXR backend must be enabled in the Oculus menu to use the Render Model and Tracked Keyboard features.",
@@ -226,7 +231,7 @@ public class OVRProjectConfigEditor : Editor
 
 			break;
 		}
-		
+
 		EditorGUILayout.EndVertical();
 
 		// apply any pending changes to project config

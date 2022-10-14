@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.VFX;
 using UnityEngine.VFX.SDF;
@@ -32,49 +30,45 @@ public class SDFUpdater : MonoBehaviour
     private Color[] _slicePixels;
     private Texture3D _final3Dtexture;
     private Color[] _final3DtexturePixels;
+    private Vector3 _sizeBox2;
+    private Vector3 _halfBox = new Vector3(.5f, .5f, .5f);
     
     // Start is called before the first frame update
     private void Start()
     {
+        _sizeBox2 = new Vector3(1f / sizeBox.x, 1f / sizeBox.y, 1f / sizeBox.z);
         SetupBaker();
         SetupSlicer();
-        StartCoroutine(UpdateOverlappingMeshes());
     }
 
-    IEnumerator UpdateOverlappingMeshes()
+    private void UpdateOverlappingMeshes()
     {
-        while (true)
+        var cols = Physics.OverlapBox(transform.position, overlapBoxExtents, transform.rotation,
+            overlapBoxLayerMask);
+        _meshFilters.Clear();
+        _meshes.Clear();
+        _mat.Clear();
+        foreach (var col in cols)
         {
-            var cols = Physics.OverlapBox(transform.position, overlapBoxExtents, transform.rotation,
-                overlapBoxLayerMask);
-            _meshFilters.Clear();
-            _meshes.Clear();
-            _mat.Clear();
-            foreach (var col in cols)
+            if (col.TryGetComponent<MeshFilter>(out var meshFilter))
             {
-                if (col.TryGetComponent<MeshFilter>(out var meshFilter))
-                {
-                    _meshFilters.Add(meshFilter);
-                    _meshes.Add(meshFilter.mesh);
-                    _mat.Add(meshFilter.transform.localToWorldMatrix);
-                }
+                _meshFilters.Add(meshFilter);
+                _meshes.Add(meshFilter.mesh);
+                _mat.Add(meshFilter.transform.localToWorldMatrix);
             }
-
-            yield return new WaitForSeconds(.1f);
         }
     }
 
     // Update is called once per frame
-    private void Update()
+    public void UpdateSDF()
     {
+        UpdateOverlappingMeshes();
         BakeSDFTexture();
         // debug VFX
         if (vfx)
             vfx.SetTexture("SDF", _baker.SdfTexture);
 
         Make3DTextureFromSlices();
-
-        //AssetDatabase.CreateAsset(_final3Dtexture, "Assets/Debug3DTexture.asset");
     }
 
     private void OnDestroy()
@@ -153,9 +147,8 @@ public class SDFUpdater : MonoBehaviour
     public float ProbeSDFTexture(Vector3 worldPos)
     {
         var localPos = transform.InverseTransformPoint(worldPos);
-        localPos.x = localPos.x / sizeBox.x + .5f;
-        localPos.y = localPos.y / sizeBox.y + .5f;
-        localPos.z = localPos.z / sizeBox.z + .5f;
+        localPos.Scale(_sizeBox2);
+        localPos+= _halfBox;
 
         return _final3Dtexture.GetPixelBilinear(localPos.x, localPos.y, localPos.z).r;
 

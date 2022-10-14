@@ -7,12 +7,12 @@
  */
 
 using System;
+using System.IO;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Data.Entities;
 using Facebook.WitAi.Data.Intents;
 using Facebook.WitAi.Data.Traits;
 using UnityEngine;
-
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -46,7 +46,50 @@ namespace Facebook.WitAi.Data.Configuration
 
         [SerializeField] public bool isDemoOnly;
 
+        /// <summary>
+        /// When set to true, will use Conduit to dispatch voice commands.
+        /// </summary>
+        [Tooltip("Conduit enables manifest-based dispatching to invoke callbacks with native types directly without requiring manual parsing.")]
+        [SerializeField] public bool useConduit;
+
+        /// <summary>
+        /// The path to the Conduit manifest.
+        /// </summary>
+        [SerializeField] public string manifestLocalPath;
+
+        #if UNITY_EDITOR
+        // Manifest editor path
+        public string ManifestEditorPath
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_manifestFullPath) || !File.Exists(_manifestFullPath))
+                {
+                    string lookup = Path.GetFileNameWithoutExtension(manifestLocalPath);
+                    string[] guids = UnityEditor.AssetDatabase.FindAssets(lookup);
+                    if (guids != null && guids.Length > 0)
+                    {
+                        _manifestFullPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                    }
+                }
+                return _manifestFullPath;
+            }
+        }
+        private string _manifestFullPath;
+        #endif
+
+        /// <summary>
+        /// When true, Conduit will automatically generate manifests each time code changes.
+        /// </summary>
+        [SerializeField] public bool autoGenerateManifest = false;
+
+        /// <summary>
+        /// When true, will open Conduit manifests when they are manually generated.
+        /// </summary>
+        [SerializeField] public bool openManifestOnGeneration = false;
+
         public WitApplication Application => application;
+
         private void OnEnable()
         {
             #if UNITY_EDITOR
@@ -55,7 +98,23 @@ namespace Facebook.WitAi.Data.Configuration
                 configId = GUID.Generate().ToString();
                 EditorUtility.SetDirty(this);
             }
+
+            if (string.IsNullOrEmpty(manifestLocalPath))
+            {
+                manifestLocalPath = $"ConduitManifest-{Guid.NewGuid()}.json";
+                EditorUtility.SetDirty(this);
+            }
+
             #endif
+        }
+
+        public void ResetData()
+        {
+            application = null;
+            clientAccessToken = null;
+            entities = null;
+            intents = null;
+            traits = null;
         }
     }
 }

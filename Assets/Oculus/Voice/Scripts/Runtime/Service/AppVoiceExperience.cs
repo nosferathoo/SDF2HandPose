@@ -18,12 +18,14 @@
  * limitations under the License.
  */
 
+using System;
 using Facebook.WitAi;
 using Facebook.WitAi.Configuration;
 using Facebook.WitAi.Interfaces;
-#if UNITY_ANDROID
+using Facebook.WitAi.Lib;
 using Oculus.Voice.Bindings.Android;
-#endif
+using Oculus.Voice.Core.Bindings.Android.PlatformLogger;
+using Oculus.Voice.Core.Bindings.Interfaces;
 using Oculus.Voice.Interfaces;
 using Oculus.VoiceSDK.Utilities;
 using UnityEngine;
@@ -37,6 +39,9 @@ namespace Oculus.Voice
         [Tooltip("Uses platform services to access wit.ai instead of accessing wit directly from within the application.")]
         [SerializeField] private bool usePlatformServices;
 
+        [Tooltip("Enables logs related to the interaction to be displayed on console")]
+        [SerializeField] private bool enableConsoleLogging;
+
         public WitRuntimeConfiguration RuntimeConfiguration
         {
             get => witRuntimeConfiguration;
@@ -45,8 +50,14 @@ namespace Oculus.Voice
 
         private IPlatformVoiceService platformService;
         private IVoiceService voiceServiceImpl;
+        private IVoiceSDKLogger voiceSDKLoggerImpl;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private readonly string PACKAGE_VERSION = "44.0.1";
+#endif
 
         private bool Initialized => null != voiceServiceImpl;
+
+        public event Action OnInitialized;
 
         #region Voice Service Properties
         public override bool Active => null != voiceServiceImpl && voiceServiceImpl.Active;
@@ -63,30 +74,52 @@ namespace Oculus.Voice
         #endregion
 
         #if UNITY_ANDROID && !UNITY_EDITOR
-        public bool HasPlatformIntegrations => usePlatformServices;
+        public bool HasPlatformIntegrations => usePlatformServices && voiceServiceImpl is VoiceSDKImpl;
         #else
         public bool HasPlatformIntegrations => false;
         #endif
+
+        public bool EnableConsoleLogging => enableConsoleLogging;
+
+        public bool UsePlatformIntegrations
+        {
+            get => usePlatformServices;
+            set
+            {
+                // If we're trying to turn on platform services and they're not currently active we
+                // will forcably reinit and try to set the state.
+                if (usePlatformServices != value || HasPlatformIntegrations != value)
+                {
+                    usePlatformServices = value;
+#if UNITY_ANDROID && !UNITY_EDITOR
+                    Debug.Log($"{(usePlatformServices ? "Enabling" : "Disabling")} platform integration.");
+                    InitVoiceSDK();
+#endif
+                }
+            }
+        }
 
         #region Voice Service Methods
 
         public override void Activate()
         {
-            voiceServiceImpl.Activate();
+            Activate(new WitRequestOptions());
         }
 
         public override void Activate(WitRequestOptions options)
         {
+            voiceSDKLoggerImpl.LogInteractionStart(options.requestID, "speech");
             voiceServiceImpl.Activate(options);
         }
 
         public override void ActivateImmediately()
         {
-            voiceServiceImpl.ActivateImmediately();
+            ActivateImmediately(new WitRequestOptions());
         }
 
         public override void ActivateImmediately(WitRequestOptions options)
         {
+            voiceSDKLoggerImpl.LogInteractionStart(options.requestID, "speech");
             voiceServiceImpl.ActivateImmediately(options);
         }
 
@@ -102,11 +135,12 @@ namespace Oculus.Voice
 
         public override void Activate(string text)
         {
-            voiceServiceImpl.Activate(text);
+            Activate(text, new WitRequestOptions());
         }
 
         public override void Activate(string text, WitRequestOptions requestOptions)
         {
+            voiceSDKLoggerImpl.LogInteractionStart(requestOptions.requestID, "message");
             voiceServiceImpl.Activate(text, requestOptions);
         }
 
@@ -114,13 +148,21 @@ namespace Oculus.Voice
 
         private void InitVoiceSDK()
         {
+            // Clean up if we're switching to native C# wit impl
+            if (!UsePlatformIntegrations && voiceServiceImpl is VoiceSDKImpl)
+            {
+                ((VoiceSDKImpl) voiceServiceImpl).Disconnect();
+            }
 #if UNITY_ANDROID && !UNITY_EDITOR
-            if (HasPlatformIntegrations)
+            var loggerImpl = new VoiceSDKPlatformLoggerImpl();
+            loggerImpl.Connect(PACKAGE_VERSION);
+            voiceSDKLoggerImpl = loggerImpl;
+            if (UsePlatformIntegrations)
             {
                 Debug.Log("Checking platform capabilities...");
                 var platformImpl = new VoiceSDKImpl(this);
                 platformImpl.OnServiceNotAvailableEvent += () => RevertToWitUnity();
-                platformImpl.Connect();
+                platformImpl.Connect(PACKAGE_VERSION);
                 platformImpl.SetRuntimeConfiguration(RuntimeConfiguration);
                 if (platformImpl.PlatformSupportsWit)
                 {
@@ -132,6 +174,8 @@ namespace Oculus.Voice
                     }
 
                     voiceServiceImpl.VoiceEvents = VoiceEvents;
+                    voiceSDKLoggerImpl.LogAnnotation("isUsingPlatformSupport", "true");
+                    voiceSDKLoggerImpl.IsUsingPlatformIntegration = true;
                 }
                 else
                 {
@@ -144,8 +188,13 @@ namespace Oculus.Voice
                 RevertToWitUnity();
             }
 #else
+            voiceSDKLoggerImpl = new VoiceSDKConsoleLoggerImpl();
             RevertToWitUnity();
 #endif
+            voiceSDKLoggerImpl.WitApplication = RuntimeConfiguration?.witConfiguration?.application?.id;
+            voiceSDKLoggerImpl.ShouldLogToConsole = EnableConsoleLogging;
+
+            OnInitialized?.Invoke();
         }
 
         private void RevertToWitUnity()
@@ -164,6 +213,7 @@ namespace Oculus.Voice
             }
 
             voiceServiceImpl.VoiceEvents = VoiceEvents;
+            voiceSDKLoggerImpl.IsUsingPlatformIntegration = false;
         }
 
         protected override void OnEnable()
@@ -181,6 +231,14 @@ namespace Oculus.Voice
             #if UNITY_ANDROID && !UNITY_EDITOR
             platformService?.SetRuntimeConfiguration(witRuntimeConfiguration);
             #endif
+
+            // Logging
+            VoiceEvents.OnResponse?.AddListener(OnWitResponseListener);
+            VoiceEvents.OnAborted?.AddListener(OnAborted);
+            VoiceEvents.OnError?.AddListener(OnError);
+            VoiceEvents.OnStartListening?.AddListener(OnStartedListening);
+            VoiceEvents.OnStoppedListening?.AddListener(OnStoppedListening);
+            VoiceEvents.OnMicDataSent?.AddListener(OnMicDataSent);
         }
 
         protected override void OnDisable()
@@ -191,8 +249,21 @@ namespace Oculus.Voice
             {
                 platformImpl.Disconnect();
             }
+
+            if (voiceSDKLoggerImpl is VoiceSDKPlatformLoggerImpl loggerImpl)
+            {
+                loggerImpl.Disconnect();
+            }
             #endif
             voiceServiceImpl = null;
+
+            // Logging
+            VoiceEvents.OnResponse?.RemoveListener(OnWitResponseListener);
+            VoiceEvents.OnAborted?.RemoveListener(OnAborted);
+            VoiceEvents.OnError?.RemoveListener(OnError);
+            VoiceEvents.OnStartListening?.RemoveListener(OnStartedListening);
+            VoiceEvents.OnStoppedListening?.RemoveListener(OnStoppedListening);
+            VoiceEvents.OnMicDataSent?.RemoveListener(OnMicDataSent);
         }
 
         private void OnApplicationFocus(bool hasFocus)
@@ -205,5 +276,46 @@ namespace Oculus.Voice
                 }
             }
         }
+
+        #region Event listerns for logging
+
+        void OnWitResponseListener(WitResponseNode witResponseNode)
+        {
+            var tokens = witResponseNode?["speech"]?["tokens"];
+            if (tokens != null)
+            {
+                int speechTokensLength = tokens.Count;
+                string speechLength = witResponseNode["speech"]["tokens"][speechTokensLength - 1]?["end"]?.Value;
+                voiceSDKLoggerImpl.LogAnnotation("audioLength", speechLength);
+            }
+
+            voiceSDKLoggerImpl.LogInteractionEndSuccess();
+        }
+
+        void OnAborted()
+        {
+            voiceSDKLoggerImpl.LogInteractionEndFailure("aborted");
+        }
+
+        void OnError(string errorType, string errorMessage)
+        {
+            voiceSDKLoggerImpl.LogInteractionEndFailure($"{errorType}:{errorMessage}");
+        }
+
+        void OnStartedListening()
+        {
+            voiceSDKLoggerImpl.LogInteractionPoint("startedListening");
+        }
+
+        void OnStoppedListening()
+        {
+            voiceSDKLoggerImpl.LogInteractionPoint("stoppedListening");
+        }
+
+        void OnMicDataSent()
+        {
+            voiceSDKLoggerImpl.LogInteractionPoint("micDataSent");
+        }
+        #endregion
     }
 }

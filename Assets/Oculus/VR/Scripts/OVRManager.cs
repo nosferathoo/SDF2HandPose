@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+
 #if USING_XR_MANAGEMENT && (USING_XR_SDK_OCULUS || USING_XR_SDK_OPENXR)
 #define USING_XR_SDK
 #endif
@@ -314,6 +315,7 @@ public class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfiguration
 	/// @params (UInt64 requestId, bool result)
 	/// </summary>
 	public static event Action<UInt64, bool> SceneCaptureComplete;
+
 
 
 	/// <summary>
@@ -853,8 +855,6 @@ public class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfiguration
 	[HideInInspector, Tooltip("Specify if Insight Passthrough should be enabled. Passthrough layers can only be used if passthrough is enabled.")]
 	public bool isInsightPassthroughEnabled = false;
 
-#region Feature Fidelity System
-#endregion
 
 	/// <summary>
 	/// The native XR API being used
@@ -1457,6 +1457,7 @@ public class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfiguration
 	private static bool wasPositionTracked = false;
 
 	private static OVRPlugin.EventDataBuffer eventDataBuffer = new OVRPlugin.EventDataBuffer();
+
 
 	public static System.Version utilitiesVersion
 	{
@@ -2143,92 +2144,80 @@ public class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfiguration
 
 	}
 
-	static readonly byte[] _guidBuffer = new byte[16];
-
-	private static Guid GuidFromBytes(byte[] bytes, int offset)
+    private void UpdateHMDEvents()
 	{
-		Buffer.BlockCopy(bytes, offset, _guidBuffer, 0, 16);
-		return new Guid(_guidBuffer);
-	}
-
-	private void UpdateHMDEvents()
-	{
-
-		while(OVRPlugin.PollEvent(ref eventDataBuffer))
+        while(OVRPlugin.PollEvent(ref eventDataBuffer))
 		{
 			switch(eventDataBuffer.EventType)
 			{
 				case OVRPlugin.EventType.DisplayRefreshRateChanged:
 					if (DisplayRefreshRateChanged != null)
 					{
-						float FromRefreshRate = BitConverter.ToSingle(eventDataBuffer.EventData, 0);
-						float ToRefreshRate = BitConverter.ToSingle(eventDataBuffer.EventData, 4);
-						DisplayRefreshRateChanged(FromRefreshRate, ToRefreshRate);
+                        var data = OVRDeserialize.ByteArrayToStructure<OVRDeserialize.DisplayRefreshRateChangedData>(eventDataBuffer.EventData);
+						DisplayRefreshRateChanged(data.FromRefreshRate, data.ToRefreshRate);
 					}
 					break;
 				case OVRPlugin.EventType.SpatialAnchorCreateComplete:
 					if (SpatialAnchorCreateComplete != null)
-					{
-						UInt64 requestId = BitConverter.ToUInt64(eventDataBuffer.EventData, 0);
-						int result = BitConverter.ToInt32(eventDataBuffer.EventData, 8);
-						UInt64 space = BitConverter.ToUInt64(eventDataBuffer.EventData, 16);
-						var uuid = GuidFromBytes(eventDataBuffer.EventData, 24);
-						SpatialAnchorCreateComplete(requestId, result >= 0, space, uuid);
+                    {
+                        var data =
+                            OVRDeserialize.ByteArrayToStructure<OVRDeserialize.SpatialAnchorCreateCompleteData>(
+                                eventDataBuffer.EventData);
+                        SpatialAnchorCreateComplete(data.RequestId, data.Result >= 0, data.Space, data.Uuid);
 					}
 					break;
 				case OVRPlugin.EventType.SpaceSetComponentStatusComplete:
 					if (SpaceSetComponentStatusComplete != null)
 					{
-						UInt64 requestId = BitConverter.ToUInt64(eventDataBuffer.EventData, 0);
-						int result = BitConverter.ToInt32(eventDataBuffer.EventData, 8);
-						UInt64 space = BitConverter.ToUInt64(eventDataBuffer.EventData, 16);
-						var uuid = GuidFromBytes(eventDataBuffer.EventData, 24);
-						OVRPlugin.SpaceComponentType componentType = (OVRPlugin.SpaceComponentType)BitConverter.ToInt32(eventDataBuffer.EventData, 40);
-						int enabled = BitConverter.ToInt32(eventDataBuffer.EventData, 44);
-						SpaceSetComponentStatusComplete(requestId, result >= 0, space, uuid, componentType, enabled != 0);
+                        var data = OVRDeserialize
+                            .ByteArrayToStructure<OVRDeserialize.SpaceSetComponentStatusCompleteData>(eventDataBuffer
+                                .EventData);
+						SpaceSetComponentStatusComplete(data.RequestId, data.Result >= 0, data.Space, data.Uuid, data.ComponentType, data.Enabled != 0);
 					}
 					break;
 				case OVRPlugin.EventType.SpaceQueryResults:
 					if (SpaceQueryResults != null)
-					{
-						UInt64 requestId = BitConverter.ToUInt64(eventDataBuffer.EventData, 0);
-						SpaceQueryResults(requestId);
+                    {
+                        var data =
+                            OVRDeserialize.ByteArrayToStructure<OVRDeserialize.SpaceQueryResultsData>(eventDataBuffer
+                                .EventData);
+						SpaceQueryResults(data.RequestId);
 					}
 					break;
 				case OVRPlugin.EventType.SpaceQueryComplete:
 					if (SpaceQueryComplete != null)
 					{
-						UInt64 requestId = BitConverter.ToUInt64(eventDataBuffer.EventData, 0);
-						int result = BitConverter.ToInt32(eventDataBuffer.EventData, 8);
-						SpaceQueryComplete(requestId, result >= 0);
+                        var data =
+                            OVRDeserialize.ByteArrayToStructure<OVRDeserialize.SpaceQueryCompleteData>(eventDataBuffer
+                                .EventData);
+						SpaceQueryComplete(data.RequestId, data.Result >= 0);
 					}
 					break;
 				case OVRPlugin.EventType.SpaceSaveComplete:
 					if (SpaceSaveComplete != null)
 					{
-						UInt64 requestId = BitConverter.ToUInt64(eventDataBuffer.EventData, 0);
-						UInt64 space = BitConverter.ToUInt64(eventDataBuffer.EventData, 8);
-						int result = BitConverter.ToInt32(eventDataBuffer.EventData, 16);
-						var uuid = GuidFromBytes(eventDataBuffer.EventData, 20);
-						SpaceSaveComplete(requestId, space, result >= 0, uuid);
+                        var data =
+                            OVRDeserialize.ByteArrayToStructure<OVRDeserialize.SpaceSaveCompleteData>(eventDataBuffer
+                                .EventData);
+						SpaceSaveComplete(data.RequestId, data.Space, data.Result >= 0, data.Uuid);
 					}
 					break;
 				case OVRPlugin.EventType.SpaceEraseComplete:
 					if (SpaceEraseComplete != null)
 					{
-						UInt64 requestId = BitConverter.ToUInt64(eventDataBuffer.EventData, 0);
-						int result = BitConverter.ToInt32(eventDataBuffer.EventData, 8);
-						var uuid = GuidFromBytes(eventDataBuffer.EventData, 12);
-						OVRPlugin.SpaceStorageLocation location = (OVRPlugin.SpaceStorageLocation)BitConverter.ToInt32(eventDataBuffer.EventData, 28);
-						SpaceEraseComplete(requestId, result >= 0, uuid, location);
+                        var data =
+                            OVRDeserialize.ByteArrayToStructure<OVRDeserialize.SpaceEraseCompleteData>(eventDataBuffer
+                                .EventData);
+						SpaceEraseComplete(data.RequestId, data.Result >= 0, data.Uuid, data.Location);
 					}
 					break;
 				case OVRPlugin.EventType.SceneCaptureComplete:
 					if (SceneCaptureComplete != null)
 					{
-						UInt64 requestId = BitConverter.ToUInt64(eventDataBuffer.EventData, 0);
-						int result = BitConverter.ToInt32(eventDataBuffer.EventData, 8);
-						SceneCaptureComplete(requestId, result >= 0);
+                        var data =
+                            OVRDeserialize.ByteArrayToStructure<OVRDeserialize.SceneCaptureCompleteData>(eventDataBuffer
+                                .EventData);
+						SceneCaptureComplete(data.RequestId, data.Result >= 0);
 					}
 					break;
 				default:

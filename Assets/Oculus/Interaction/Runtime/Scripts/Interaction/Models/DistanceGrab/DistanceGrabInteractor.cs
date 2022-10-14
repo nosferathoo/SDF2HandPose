@@ -47,7 +47,15 @@ namespace Oculus.Interaction
 
         private IMovement _movement;
 
-        public ConicalFrustum PointerFrustum => _selectionFrustum;
+        public Ray Pointer
+        {
+            get
+            {
+                return new Ray(_selectionFrustum.StartPoint,
+                    _selectionFrustum.Direction);
+            }
+        }
+        public IDistanceInteractable DistanceInteractable => this.Interactable;
 
         public float BestInteractableWeight { get; private set; } = float.MaxValue;
 
@@ -181,7 +189,7 @@ namespace Oculus.Interaction
         }
 
         #region Inject
-        public void InjectAllGrabInteractor(ISelector selector, ConicalFrustum selectionFrustum)
+        public void InjectAllDistanceGrabInteractor(ISelector selector, ConicalFrustum selectionFrustum)
         {
             InjectSelector(selector);
             InjectSelectionFrustum(selectionFrustum);

@@ -1,11 +1,14 @@
 using UnityEngine;
 
 /// <summary>
-/// This is a helper component. When added to a GameObject that represents a scene entity,
-/// such as a floor, ceiling, or desk, this component generates a mesh from its boundary vertices.
+/// Generates a mesh that represents a plane's boundary.
 /// </summary>
+/// <remarks>
+/// When added to a GameObject that represents a scene entity, such as a floor, ceiling, or desk, this component
+/// generates a mesh from its boundary vertices.
+/// </remarks>
 [RequireComponent(typeof(MeshFilter))]
-public class OVRPlaneMeshFilter : MonoBehaviour
+public class OVRScenePlaneMeshFilter : MonoBehaviour
 {
 	private MeshFilter _meshFilter;
 	private Mesh _mesh;
