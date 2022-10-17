@@ -119,6 +119,7 @@ public class SDFUpdater : MonoBehaviour
         slicer.SetTexture(kernelIndex, "Result", _sliceRenderTexture);
         slicer.SetTexture(_kernelIndex, "voxels", source);
         slicer.SetInt("layer", layer);
+        
         slicer.Dispatch(_kernelIndex, maxResolution, maxResolution, 1);
     }
 
