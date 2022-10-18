@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.VFX;
 using UnityEngine.VFX.SDF;
+using Debug = UnityEngine.Debug;
 
 public class SDFUpdater : MonoBehaviour
 {
@@ -15,7 +19,7 @@ public class SDFUpdater : MonoBehaviour
     public Vector3 overlapBoxExtents;
     public LayerMask overlapBoxLayerMask;
 
-    private MeshToSDFBaker _baker;
+    public MeshToSDFBaker Baker;
 
     private List<Mesh> _meshes;
     private List<Matrix4x4> _mat;
@@ -23,7 +27,7 @@ public class SDFUpdater : MonoBehaviour
     private List<MeshFilter> _meshFilters = new List<MeshFilter>();
 
     // slicing and 3d texture rendering
-    public ComputeShader slicer;
+    public ComputeShader slicer, sampler;
     private RenderTexture _sliceRenderTexture; // for 2D slice rendering
     private int _kernelIndex;
     private Texture2D _slice2Dtexture;
@@ -32,13 +36,18 @@ public class SDFUpdater : MonoBehaviour
     private Color[] _final3DtexturePixels;
     private Vector3 _sizeBox2;
     private Vector3 _halfBox = new Vector3(.5f, .5f, .5f);
+
+    private ComputeBuffer _samplerPositionsBuffer, _samplerResultsBuffer;
+    private int _samplerKernelIndex;
+
+    // private Stopwatch _watch = new Stopwatch();
     
     // Start is called before the first frame update
     private void Start()
     {
         _sizeBox2 = new Vector3(1f / sizeBox.x, 1f / sizeBox.y, 1f / sizeBox.z);
         SetupBaker();
-        SetupSlicer();
+        //SetupSlicer();
     }
 
     private void UpdateOverlappingMeshes()
@@ -59,28 +68,41 @@ public class SDFUpdater : MonoBehaviour
         }
     }
 
+    // private void WatchStart()
+    // {
+    //     _watch.Reset();
+    //     _watch.Start();
+    // }
+    //
+    // private void WatchPrint(string taskName)
+    // {
+    //     Debug.Log($"SDFUpdate watch timer for {taskName}: {_watch.Elapsed}");
+    //     _watch.Restart();
+    // }
+
     // Update is called once per frame
     public void UpdateSDF()
     {
-        UpdateOverlappingMeshes();
-        BakeSDFTexture();
+        //WatchStart();
+        UpdateOverlappingMeshes();  //WatchPrint("UpdateOverlappingMeshes");
+        BakeSDFTexture();  //WatchPrint("BakeSDFTexture");
         // debug VFX
         if (vfx)
-            vfx.SetTexture("SDF", _baker.SdfTexture);
+            vfx.SetTexture("SDF", Baker.SdfTexture);
 
-        Make3DTextureFromSlices();
+        //Make3DTextureFromSlices();
     }
 
     private void OnDestroy()
     {
-        _baker.Dispose();
+        Baker.Dispose();
     }
 
     private void SetupBaker()
     {
         _mat = new List<Matrix4x4>();
         _meshes = new List<Mesh>();
-        _baker = new MeshToSDFBaker(sizeBox, Vector3.zero, maxResolution,
+        Baker = new MeshToSDFBaker(sizeBox, Vector3.zero, maxResolution,
             _meshes, _mat);
     }
 
@@ -91,13 +113,14 @@ public class SDFUpdater : MonoBehaviour
             _mat[i] = transform.localToWorldMatrix.inverse * _meshFilters[i].transform.localToWorldMatrix;
         }
 
-        _baker.Reinit(sizeBox, Vector3.zero, maxResolution, _meshes, _mat);
+        Baker.Reinit(sizeBox, Vector3.zero, maxResolution, _meshes, _mat);
 
-        _baker.BakeSDF();
+        Baker.BakeSDF();
     }
 
     private void SetupSlicer()
     {
+        
         _sliceRenderTexture = new RenderTexture(maxResolution, maxResolution, 0, RenderTextureFormat.RFloat)
         {
             dimension = UnityEngine.Rendering.TextureDimension.Tex2D,
@@ -135,7 +158,7 @@ public class SDFUpdater : MonoBehaviour
         var layerSize = maxResolution * maxResolution;
         for (int k = 0; k < maxResolution; k++)
         {
-            Copy3DSliceToRenderTexture(_baker.SdfTexture, k);
+            Copy3DSliceToRenderTexture(Baker.SdfTexture, k);
             MakeSlice2DTextureFromRenderTexture();
             _slicePixels = _slice2Dtexture.GetPixels();
             Array.Copy(_slicePixels, 0, _final3DtexturePixels, k * layerSize, layerSize);
@@ -145,6 +168,14 @@ public class SDFUpdater : MonoBehaviour
         _final3Dtexture.Apply();
     }
 
+    public Vector3 WorldToTexPos(Vector3 worldPos)
+    {
+        var localPos = transform.InverseTransformPoint(worldPos);
+        localPos.Scale(_sizeBox2);
+        localPos += _halfBox;
+        return localPos;
+    }
+    
     public float ProbeSDFTexture(Vector3 worldPos)
     {
         var localPos = transform.InverseTransformPoint(worldPos);
@@ -155,5 +186,32 @@ public class SDFUpdater : MonoBehaviour
 
         //localPos *= maxResolution;
         //return _final3Dtexture.GetPixel((int) localPos.x, (int) localPos.y, (int) localPos.z);
+    }
+
+    public void SetupSampler(RenderTexture source, int pointsCount)
+    {
+        //WatchStart();
+        _samplerPositionsBuffer = new ComputeBuffer(pointsCount, sizeof(float) * 3, ComputeBufferType.Default);
+        _samplerResultsBuffer = new ComputeBuffer(pointsCount, sizeof(float), ComputeBufferType.Default);
+        //_samplerKernelIndex = sampler.FindKernel("CSMain");
+        sampler.SetTexture(0, "Voxels", source);
+        sampler.SetBuffer(0, "Positions", _samplerPositionsBuffer);
+        sampler.SetBuffer(0, "Results", _samplerResultsBuffer);
+        //WatchPrint("SetupSampler");
+    }
+
+    public void RunSampler(Vector3[] inputPositions, float[] results)
+    {
+        //WatchStart();
+        _samplerPositionsBuffer.SetData(inputPositions);
+        sampler.Dispatch(0, _samplerPositionsBuffer.count, 1, 1);
+        _samplerResultsBuffer.GetData(results);
+        //WatchPrint("RunSampler");
+    }
+
+    public void ReleaseSampler()
+    {
+        _samplerPositionsBuffer.Release();
+        _samplerResultsBuffer.Release();
     }
 }

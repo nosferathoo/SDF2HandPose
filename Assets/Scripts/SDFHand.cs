@@ -1,4 +1,5 @@
 using System.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class SDFHand : BaseHand
@@ -38,6 +39,10 @@ public class SDFHand : BaseHand
     {
         sdfUpdater.UpdateSDF();
         var stopped = new bool[fingerParts.Length];
+        Vector3[] fingerPartsPositions = new Vector3[fingerParts.Length];
+        float[] fingerPartsResult = new float[fingerParts.Length];
+        
+        sdfUpdater.SetupSampler(sdfUpdater.Baker.SdfTexture, fingerParts.Length);
 
         for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
         {
@@ -50,14 +55,25 @@ public class SDFHand : BaseHand
                 }
             }
             
+            // probing
+            for (var i = 0; i < fingerParts.Length; ++i)
+            {
+                fingerPartsPositions[i] = sdfUpdater.WorldToTexPos(fingerParts[i].position);
+            }
+            
+            sdfUpdater.RunSampler(fingerPartsPositions, fingerPartsResult);
+            
+            
             for (var  i = 0; i < fingerParts.Length; ++i)
             {
                 if (stopped[i]) continue;
-                if (sdfUpdater.ProbeSDFTexture(fingerPartsPads[i].position) < minTipDistance)
+                if (fingerPartsResult[i] < minTipDistance)
                 {
                     stopped[i] = true;
                 }
             }
         }
+        
+        sdfUpdater.ReleaseSampler();
     }
 }
