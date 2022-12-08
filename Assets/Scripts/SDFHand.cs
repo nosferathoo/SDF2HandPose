@@ -1,18 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class SDFHand : BaseHand
 {
-    private const float MaxSquishAngle = 90f;
-
     [SerializeField] private Finger[] fingers;
     [SerializeField] private float alphaStep = 0.01f;
     [SerializeField] private float minTipDistance = 0.01f;
     [SerializeField] private SDFUpdater sdfUpdater;
     
     private List<Vector3> _fingerTipPositionCache = new List<Vector3>();
+    private float[] _fingerTipResult;
 
     private void OnValidate()
     {
@@ -42,6 +40,7 @@ public class SDFHand : BaseHand
             for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
             {
                 finger.Squish = alpha;
+                yield return new WaitForEndOfFrame();
                 var texPos = sdfUpdater.WorldToTexPos(finger.Tip.position);
                 _fingerTipPositionCache.Add(texPos);
             }
@@ -50,19 +49,18 @@ public class SDFHand : BaseHand
         Debug.Log($"PrepareFingerTipPositionCache: final positions count {_fingerTipPositionCache.Count}");
         OpenHand();
         sdfUpdater.SetupSampler(_fingerTipPositionCache.Count);
+        sdfUpdater.SetSamplerData(_fingerTipPositionCache);
+        _fingerTipResult = new float[_fingerTipPositionCache.Count];
     }
 
     protected override void CloseHand2()
     {
+        StartWatch();
         OpenHand();
-        sdfUpdater.UpdateSDF();
-        sdfUpdater.SetSamplerData(_fingerTipPositionCache);
-;
-        var fingerTipResult = new float[_fingerTipPositionCache.Count];
         
-        sdfUpdater.RunSampler(fingerTipResult);
+        sdfUpdater.RunSampler(_fingerTipResult);
         
-        var e = fingerTipResult.GetEnumerator();
+        var e = _fingerTipResult.GetEnumerator();
 
         foreach (var finger in fingers)
         {
@@ -71,7 +69,7 @@ public class SDFHand : BaseHand
             {
                 e.MoveNext();
                 if (stopped) continue;
-                
+
                 if ((float)e.Current < minTipDistance)
                 {
                     finger.Squish = alpha;
@@ -79,5 +77,7 @@ public class SDFHand : BaseHand
                 }
             }
         }
+        
+        StopWatch();
     }
 }

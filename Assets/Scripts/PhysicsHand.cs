@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using UnityEngine;
 
 public class PhysicsHand : BaseHand
@@ -23,6 +24,7 @@ public class PhysicsHand : BaseHand
 
     protected override void CloseHand2()
     {
+        StartWatch();
         foreach (var finger in fingers)
         {
             for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
@@ -35,6 +37,8 @@ public class PhysicsHand : BaseHand
                 }
             }
         }
+
+        StopWatch();
     }
 
     private void OnDrawGizmosSelected()

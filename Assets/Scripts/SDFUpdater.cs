@@ -1,31 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.VFX;
-using UnityEngine.VFX.SDF;
-using Debug = UnityEngine.Debug;
 
+[RequireComponent(typeof(SDFTexture))]
 public class SDFUpdater : MonoBehaviour
 {
+    [SerializeField] private SDFTexture sdfTexture;
     public Vector3 sizeBox;
-    public int maxResolution;
-
-
-    public VisualEffect vfx;
-
-    public Vector3 overlapBoxExtents;
-    public LayerMask overlapBoxLayerMask;
-
-    public MeshToSDFBaker Baker;
-
-    private List<Mesh> _meshes;
-    private List<Matrix4x4> _mat;
-
-    private List<MeshFilter> _meshFilters = new List<MeshFilter>();
-
+    public RenderTexture renderTexture;
+    
     // slicing and 3d texture rendering
     public ComputeShader sampler;
     private Vector3 _sizeBox2;
@@ -34,82 +18,39 @@ public class SDFUpdater : MonoBehaviour
     private int _samplerKernelIndex;
     private ComputeBuffer _samplerPositionsBuffer, _samplerResultsBuffer;
     private uint _samplerThreadGroupSize;
-
-    // private Stopwatch _watch = new Stopwatch();
     
     // Start is called before the first frame update
     private void Start()
     {
         _sizeBox2 = new Vector3(1f / sizeBox.x, 1f / sizeBox.y, 1f / sizeBox.z);
-        SetupBaker();
     }
 
-    private void UpdateOverlappingMeshes()
+    private MeshToSDF _meshToSDF;
+    private int Res => sdfTexture.resolution;
+
+    private void OnValidate()
     {
-        var cols = Physics.OverlapBox(transform.position, overlapBoxExtents, transform.rotation,
-            overlapBoxLayerMask);
-        _meshFilters.Clear();
-        _meshes.Clear();
-        _mat.Clear();
-        foreach (var col in cols)
+        if (sdfTexture) sdfTexture = GetComponent<SDFTexture>();
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.TryGetComponent<MeshToSDF>(out var mesh))
         {
-            if (col.TryGetComponent<MeshFilter>(out var meshFilter))
-            {
-                _meshFilters.Add(meshFilter);
-                _meshes.Add(meshFilter.mesh);
-                _mat.Add(meshFilter.transform.localToWorldMatrix);
-            }
+            if (_meshToSDF) _meshToSDF.enabled = false;
+            _meshToSDF = mesh;
+            mesh.sdfTexture = sdfTexture;
+            mesh.enabled = true;
         }
     }
 
-    // private void WatchStart()
-    // {
-    //     _watch.Reset();
-    //     _watch.Start();
-    // }
-    //
-    // private void WatchPrint(string taskName)
-    // {
-    //     Debug.Log($"SDFUpdate watch timer for {taskName}: {_watch.Elapsed}");
-    //     _watch.Restart();
-    // }
-
-    // Update is called once per frame
-    public void UpdateSDF()
+    private void OnTriggerExit(Collider other)
     {
-        //WatchStart();
-        UpdateOverlappingMeshes();  //WatchPrint("UpdateOverlappingMeshes");
-        BakeSDFTexture();  //WatchPrint("BakeSDFTexture");
-        // debug VFX
-        if (vfx)
-            vfx.SetTexture("SDF", Baker.SdfTexture);
-
-        //Make3DTextureFromSlices();
-    }
-
-    private void OnDestroy()
-    {
-        Baker.Dispose();
-    }
-
-    private void SetupBaker()
-    {
-        _mat = new List<Matrix4x4>();
-        _meshes = new List<Mesh>();
-        Baker = new MeshToSDFBaker(sizeBox, Vector3.zero, maxResolution,
-            _meshes, _mat);
-    }
-
-    private void BakeSDFTexture()
-    {
-        for (var i = 0; i < _meshFilters.Count; ++i)
+        if (other.TryGetComponent<MeshToSDF>(out var mesh) && mesh.Equals(_meshToSDF))
         {
-            _mat[i] = transform.localToWorldMatrix.inverse * _meshFilters[i].transform.localToWorldMatrix;
+            _meshToSDF.enabled = false;
+            _meshToSDF = null;
         }
-
-        Baker.Reinit(sizeBox, Vector3.zero, maxResolution, _meshes, _mat);
-
-        Baker.BakeSDF();
     }
     
     public Vector3 WorldToTexPos(Vector3 worldPos)
@@ -122,7 +63,7 @@ public class SDFUpdater : MonoBehaviour
 
     public void SetupSampler(int pointsCount)
     {
-        //WatchStart();
+
         _samplerKernelIndex = sampler.FindKernel("CSMain");
         sampler.GetKernelThreadGroupSizes(_samplerKernelIndex, out _samplerThreadGroupSize, out _, out _);
         Debug.Log($"SetupSampler: samplerThreadGroupSize={_samplerThreadGroupSize}");
@@ -131,8 +72,9 @@ public class SDFUpdater : MonoBehaviour
         _samplerResultsBuffer = new ComputeBuffer(pointsCount, sizeof(float));
         sampler.SetBuffer(_samplerKernelIndex, "Positions", _samplerPositionsBuffer);
         sampler.SetBuffer(_samplerKernelIndex, "Results", _samplerResultsBuffer);
-        sampler.SetTexture(_samplerKernelIndex, "Voxels", Baker.SdfTexture);
+        sampler.SetTexture(_samplerKernelIndex, "Voxels", renderTexture);
     }
+
 
     public void SetSamplerData(List<Vector3> inputPositions)
     {
@@ -141,10 +83,13 @@ public class SDFUpdater : MonoBehaviour
 
     public void RunSampler(float[] results)
     {
-        //WatchStart();
         sampler.Dispatch(_samplerKernelIndex, 1, 1, 1);
         _samplerResultsBuffer.GetData(results);
-        //WatchPrint("RunSampler");
+    }
+
+    private void OnDestroy()
+    {
+        ReleaseSampler();
     }
 
     public void ReleaseSampler()

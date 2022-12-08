@@ -2,17 +2,25 @@
 
 public abstract class BaseHand : MonoBehaviour
 {
-    private System.Diagnostics.Stopwatch _watch = new System.Diagnostics.Stopwatch();
+    protected System.Diagnostics.Stopwatch _watch = new System.Diagnostics.Stopwatch();
     
     public abstract void OpenHand();
 
-    public void CloseHand()
+    protected void StartWatch()
     {
         _watch.Reset();
         _watch.Start();
-        CloseHand2();
+    }
+
+    protected void StopWatch()
+    {
         _watch.Stop();
         Debug.Log($"Time elapsed: {_watch.Elapsed}");
+    }
+
+    public void CloseHand()
+    {
+        CloseHand2();
     }
 
     protected abstract void CloseHand2();
