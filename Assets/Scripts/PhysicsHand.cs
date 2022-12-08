@@ -29,7 +29,7 @@ public class PhysicsHand : BaseHand
             {
                 finger.Squish = alpha;
 
-                if (Physics.OverlapSphereNonAlloc(finger.Pad.position, tipRadius, _colliders, layerMask) > 0)
+                if (Physics.OverlapSphereNonAlloc(finger.Tip.position, tipRadius, _colliders, layerMask) > 0)
                 {
                     break;
                 }
@@ -41,7 +41,7 @@ public class PhysicsHand : BaseHand
     {
         foreach (var finger in fingers)
         {
-            Gizmos.DrawWireSphere(finger.Pad.position, tipRadius);
+            Gizmos.DrawWireSphere(finger.Tip.position, tipRadius);
         }
     }
 }

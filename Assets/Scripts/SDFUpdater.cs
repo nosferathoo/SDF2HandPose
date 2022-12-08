@@ -27,18 +27,13 @@ public class SDFUpdater : MonoBehaviour
     private List<MeshFilter> _meshFilters = new List<MeshFilter>();
 
     // slicing and 3d texture rendering
-    public ComputeShader slicer, sampler;
-    private RenderTexture _sliceRenderTexture; // for 2D slice rendering
-    private int _kernelIndex;
-    private Texture2D _slice2Dtexture;
-    private Color[] _slicePixels;
-    private Texture3D _final3Dtexture;
-    private Color[] _final3DtexturePixels;
+    public ComputeShader sampler;
     private Vector3 _sizeBox2;
     private Vector3 _halfBox = new Vector3(.5f, .5f, .5f);
 
-    private ComputeBuffer _samplerPositionsBuffer, _samplerResultsBuffer;
     private int _samplerKernelIndex;
+    private ComputeBuffer _samplerPositionsBuffer, _samplerResultsBuffer;
+    private uint _samplerThreadGroupSize;
 
     // private Stopwatch _watch = new Stopwatch();
     
@@ -47,7 +42,6 @@ public class SDFUpdater : MonoBehaviour
     {
         _sizeBox2 = new Vector3(1f / sizeBox.x, 1f / sizeBox.y, 1f / sizeBox.z);
         SetupBaker();
-        //SetupSlicer();
     }
 
     private void UpdateOverlappingMeshes()
@@ -117,57 +111,7 @@ public class SDFUpdater : MonoBehaviour
 
         Baker.BakeSDF();
     }
-
-    private void SetupSlicer()
-    {
-        
-        _sliceRenderTexture = new RenderTexture(maxResolution, maxResolution, 0, RenderTextureFormat.RFloat)
-        {
-            dimension = UnityEngine.Rendering.TextureDimension.Tex2D,
-            enableRandomWrite = true,
-            wrapMode = TextureWrapMode.Clamp
-        };
-        _sliceRenderTexture.Create();
-
-        _slice2Dtexture = new Texture2D(maxResolution, maxResolution);
-
-        _final3Dtexture = new Texture3D(maxResolution, maxResolution, maxResolution, TextureFormat.RFloat, false);
-        _final3Dtexture.filterMode = FilterMode.Trilinear;
-        _final3DtexturePixels = _final3Dtexture.GetPixels();
-    }
-
-    private void Copy3DSliceToRenderTexture(RenderTexture source, int layer)
-    {
-        int kernelIndex = slicer.FindKernel("CSMain");
-        slicer.SetTexture(kernelIndex, "Result", _sliceRenderTexture);
-        slicer.SetTexture(_kernelIndex, "voxels", source);
-        slicer.SetInt("layer", layer);
-        
-        slicer.Dispatch(_kernelIndex, maxResolution, maxResolution, 1);
-    }
-
-    private void MakeSlice2DTextureFromRenderTexture()
-    {
-        RenderTexture.active = _sliceRenderTexture;
-        _slice2Dtexture.ReadPixels(new Rect(0, 0, maxResolution, maxResolution), 0, 0);
-        _slice2Dtexture.Apply();
-    }
-
-    private void Make3DTextureFromSlices()
-    {
-        var layerSize = maxResolution * maxResolution;
-        for (int k = 0; k < maxResolution; k++)
-        {
-            Copy3DSliceToRenderTexture(Baker.SdfTexture, k);
-            MakeSlice2DTextureFromRenderTexture();
-            _slicePixels = _slice2Dtexture.GetPixels();
-            Array.Copy(_slicePixels, 0, _final3DtexturePixels, k * layerSize, layerSize);
-        }
-
-        _final3Dtexture.SetPixels(_final3DtexturePixels);
-        _final3Dtexture.Apply();
-    }
-
+    
     public Vector3 WorldToTexPos(Vector3 worldPos)
     {
         var localPos = transform.InverseTransformPoint(worldPos);
@@ -175,36 +119,30 @@ public class SDFUpdater : MonoBehaviour
         localPos += _halfBox;
         return localPos;
     }
-    
-    public float ProbeSDFTexture(Vector3 worldPos)
-    {
-        var localPos = transform.InverseTransformPoint(worldPos);
-        localPos.Scale(_sizeBox2);
-        localPos+= _halfBox;
 
-        return _final3Dtexture.GetPixelBilinear(localPos.x, localPos.y, localPos.z).r;
-
-        //localPos *= maxResolution;
-        //return _final3Dtexture.GetPixel((int) localPos.x, (int) localPos.y, (int) localPos.z);
-    }
-
-    public void SetupSampler(RenderTexture source, int pointsCount)
+    public void SetupSampler(int pointsCount)
     {
         //WatchStart();
-        _samplerPositionsBuffer = new ComputeBuffer(pointsCount, sizeof(float) * 3, ComputeBufferType.Default);
-        _samplerResultsBuffer = new ComputeBuffer(pointsCount, sizeof(float), ComputeBufferType.Default);
-        //_samplerKernelIndex = sampler.FindKernel("CSMain");
-        sampler.SetTexture(0, "Voxels", source);
-        sampler.SetBuffer(0, "Positions", _samplerPositionsBuffer);
-        sampler.SetBuffer(0, "Results", _samplerResultsBuffer);
-        //WatchPrint("SetupSampler");
+        _samplerKernelIndex = sampler.FindKernel("CSMain");
+        sampler.GetKernelThreadGroupSizes(_samplerKernelIndex, out _samplerThreadGroupSize, out _, out _);
+        Debug.Log($"SetupSampler: samplerThreadGroupSize={_samplerThreadGroupSize}");
+
+        _samplerPositionsBuffer = new ComputeBuffer(pointsCount, sizeof(float) * 3);
+        _samplerResultsBuffer = new ComputeBuffer(pointsCount, sizeof(float));
+        sampler.SetBuffer(_samplerKernelIndex, "Positions", _samplerPositionsBuffer);
+        sampler.SetBuffer(_samplerKernelIndex, "Results", _samplerResultsBuffer);
+        sampler.SetTexture(_samplerKernelIndex, "Voxels", Baker.SdfTexture);
     }
 
-    public void RunSampler(Vector3[] inputPositions, float[] results)
+    public void SetSamplerData(List<Vector3> inputPositions)
     {
-        //WatchStart();
         _samplerPositionsBuffer.SetData(inputPositions);
-        sampler.Dispatch(0, _samplerPositionsBuffer.count, 1, 1);
+    }
+
+    public void RunSampler(float[] results)
+    {
+        //WatchStart();
+        sampler.Dispatch(_samplerKernelIndex, 1, 1, 1);
         _samplerResultsBuffer.GetData(results);
         //WatchPrint("RunSampler");
     }

@@ -8,11 +8,11 @@ public class Finger : MonoBehaviour
     [SerializeField] private int chainLength = 3;
     [OnValueChanged("OnSquishChangeCallback")]
     [SerializeField] private float squish = 0f;
-    [SerializeField] private Transform pad;
+    [SerializeField] private Transform tip;
     
     private Dictionary<Transform,Quaternion> originalRotations = new Dictionary<Transform, Quaternion>();
 
-    public Transform Pad => pad;
+    public Transform Tip => tip;
 
     public float Squish
     {
