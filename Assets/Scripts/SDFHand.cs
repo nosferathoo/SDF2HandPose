@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class SDFHand : BaseHand
 {
@@ -10,7 +11,7 @@ public class SDFHand : BaseHand
     [SerializeField] private SDFUpdater sdfUpdater;
     
     private List<Vector3> _fingerTipPositionCache = new List<Vector3>();
-    private float[] _fingerTipResult;
+    //private float[] _fingerTipResult;
 
     private void OnValidate()
     {
@@ -50,34 +51,62 @@ public class SDFHand : BaseHand
         OpenHand();
         sdfUpdater.SetupSampler(_fingerTipPositionCache.Count);
         sdfUpdater.SetSamplerData(_fingerTipPositionCache);
-        _fingerTipResult = new float[_fingerTipPositionCache.Count];
+        //_fingerTipResult = new float[_fingerTipPositionCache.Count];
     }
 
     protected override void CloseHand2()
     {
         StartWatch();
-        OpenHand();
-        
-        sdfUpdater.RunSampler(_fingerTipResult);
-        
-        var e = _fingerTipResult.GetEnumerator();
 
-        foreach (var finger in fingers)
+        var output = sdfUpdater.RunSampler();
+        StopWatch(); StartWatch();
+        AsyncGPUReadback.Request(output, request =>
         {
+            StopWatch(); StartWatch();
+            OpenHand();
+            var resultArr = request.GetData<float>();
+            var alpha = 0f;
             var stopped = false;
-            for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
+            var eFinger = fingers.GetEnumerator();
+            eFinger.MoveNext();
+            foreach (var result in resultArr)
             {
-                e.MoveNext();
-                if (stopped) continue;
-
-                if ((float)e.Current < minTipDistance)
+                if (!stopped && result < minTipDistance)
                 {
-                    finger.Squish = alpha;
                     stopped = true;
+                    ((Finger)eFinger.Current).Squish = alpha;
+                }
+            
+                alpha += alphaStep;
+                if (alpha > 1.0f)
+                {
+                    if (!stopped)
+                        ((Finger)eFinger.Current).Squish = 1f;
+                    alpha = 0;
+                    stopped = false;
+                    eFinger.MoveNext();
                 }
             }
-        }
+            StopWatch();
+        });
+
+        // var e = _fingerTipResult.GetEnumerator();
+        // foreach (var finger in fingers)
+        // {
+        //     var stopped = false;
+        //     for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
+        //     {
+        //         e.MoveNext();
+        //         if (stopped) continue;
+        //
+        //         if ((float)e.Current < minTipDistance)
+        //         {
+        //             finger.Squish = alpha;
+        //             stopped = true;
+        //         }
+        //     }
+        // }
         
-        StopWatch();
+        
     }
 }

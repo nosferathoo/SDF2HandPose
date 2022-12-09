@@ -88,7 +88,7 @@ PrefabInstance:
     - target: {fileID: 5309141790969043180, guid: 11dd1998e335744a792e512053511871,
         type: 3}
       propertyPath: m_Resolution
-      value: 16
+      value: 8
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 3131966626657158235, guid: 11dd1998e335744a792e512053511871, type: 3}
@@ -125,12 +125,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sdfTexture: {fileID: 7459309820153812669}
-  vfx: {fileID: 0}
-  sizeBox: {x: 0, y: 0, z: 0}
-  overlapBoxExtents: {x: 0, y: 0, z: 0}
-  overlapBoxLayerMask:
-    serializedVersion: 2
-    m_Bits: 0
+  sizeBox: {x: 1, y: 1, z: 1}
+  renderTexture: {fileID: 8400000, guid: d9a20546dd0bb42bd94222e9589024d2, type: 2}
   sampler: {fileID: 7200000, guid: 525c672f169de384c83b2336d86e8edf, type: 3}
 --- !u!114 &7459309820153812669 stripped
 MonoBehaviour:

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.VFX;
 
 [RequireComponent(typeof(SDFTexture))]
@@ -81,10 +82,12 @@ public class SDFUpdater : MonoBehaviour
         _samplerPositionsBuffer.SetData(inputPositions);
     }
 
-    public void RunSampler(float[] results)
+    public ComputeBuffer RunSampler()
     {
         sampler.Dispatch(_samplerKernelIndex, 1, 1, 1);
-        _samplerResultsBuffer.GetData(results);
+        return _samplerResultsBuffer;
+        
+        //_samplerResultsBuffer.GetData(results);
     }
 
     private void OnDestroy()
