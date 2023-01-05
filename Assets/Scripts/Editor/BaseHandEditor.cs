@@ -11,13 +11,33 @@ public class BaseHandEditor : Editor
         
         EditorGUILayout.HelpBox("Below buttons will currently work only in play mode",MessageType.Info);
         
-        if(GUILayout.Button("Open Hand"))
+        var bh = target as BaseHand;
+
+        if (bh)
         {
-            (target as BaseHand)?.OpenHand();
-        }
-        if(GUILayout.Button("Close Hand"))
-        {
-            (target as BaseHand)?.CloseHand();
+            if(GUILayout.Button("Open Hand"))
+            {
+                bh.OpenHand();
+            }
+            if(GUILayout.Button("Close Hand"))
+            {
+                bh.CloseHand();
+            }
+
+            if (GUILayout.Button("Toggle interactive update"))
+            {
+                if (bh.interactiveUpdate != null)
+                {
+                    bh.StopCoroutine(bh.interactiveUpdate);
+                    bh.interactiveUpdate = null;
+                }
+                else
+                {
+                    bh.interactiveUpdate = bh.StartCoroutine(bh.InteractiveUpdate());
+                }
+            }
+            
+            GUILayout.Label(bh.interactiveUpdate==null?"Update off":"Update on");
         }
     }
 }

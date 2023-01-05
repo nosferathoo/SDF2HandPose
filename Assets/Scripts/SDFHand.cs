@@ -10,6 +10,8 @@ public class SDFHand : BaseHand
     [SerializeField] private float minTipDistance = 0.01f;
     [SerializeField] private SDFUpdater sdfUpdater;
     
+    [SerializeField] private GameObject fingerTipPositionIndicatorPrefab;
+    
     private List<Vector3> _fingerTipPositionCache = new List<Vector3>();
     //private float[] _fingerTipResult;
 
@@ -44,6 +46,10 @@ public class SDFHand : BaseHand
                 yield return new WaitForEndOfFrame();
                 var texPos = sdfUpdater.WorldToTexPos(finger.Tip.position);
                 _fingerTipPositionCache.Add(texPos);
+                if (fingerTipPositionIndicatorPrefab)
+                {
+                    Instantiate(fingerTipPositionIndicatorPrefab, finger.Tip.position, Quaternion.identity, transform);
+                }
             }
         }
         
@@ -63,7 +69,7 @@ public class SDFHand : BaseHand
         AsyncGPUReadback.Request(output, request =>
         {
             StopWatch(); StartWatch();
-            OpenHand();
+            // OpenHand();
             var resultArr = request.GetData<float>();
             var alpha = 0f;
             var stopped = false;

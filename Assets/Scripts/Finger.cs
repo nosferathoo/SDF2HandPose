@@ -2,6 +2,7 @@ using NaughtyAttributes;
 using System.Collections.Generic;
 using UnityEngine;
 
+[ExecuteInEditMode]
 public class Finger : MonoBehaviour
 {
     private const float MaxSquishAngle = 90f;
