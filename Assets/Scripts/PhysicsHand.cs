@@ -38,7 +38,7 @@ public class PhysicsHand : BaseHand
             }
         }
 
-        StopWatch();
+        StopWatch("physics finger posing");
     }
 
     private void OnDrawGizmosSelected()

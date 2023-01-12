@@ -15,10 +15,10 @@ public abstract class BaseHand : MonoBehaviour
         _watch.Start();
     }
 
-    protected void StopWatch()
+    protected void StopWatch(string context)
     {
         _watch.Stop();
-        Debug.Log($"Time elapsed: {_watch.Elapsed}");
+        Debug.Log($"Time elapsed in {context}: {_watch.Elapsed}");
     }
 
     public void CloseHand()
@@ -30,10 +30,11 @@ public abstract class BaseHand : MonoBehaviour
 
     public IEnumerator InteractiveUpdate()
     {
+        var weof = new WaitForSeconds(.1f);
         while (true)
         {
             CloseHand();
-            yield return new WaitForSeconds(.1f);
+            yield return weof;
         }
     }
 }

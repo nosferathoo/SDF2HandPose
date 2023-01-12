@@ -11,8 +11,13 @@ public class SDFHand : BaseHand
     [SerializeField] private SDFUpdater sdfUpdater;
     
     [SerializeField] private GameObject fingerTipPositionIndicatorPrefab;
+
+    [SerializeField] private bool fineTune = false;
+    [SerializeField] private float mull = 1f;
     
     private List<Vector3> _fingerTipPositionCache = new List<Vector3>();
+
+    private List<float> _fingerTipDeltaPositionCache = new List<float>();
     //private float[] _fingerTipResult;
 
     private void OnValidate()
@@ -38,19 +43,25 @@ public class SDFHand : BaseHand
         yield return new WaitForEndOfFrame();
         OpenHand();
         
+        var prevPos = Vector3.zero;
         foreach (var finger in fingers)
         {
+            
             for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
             {
                 finger.Squish = alpha;
                 yield return new WaitForEndOfFrame();
                 var texPos = sdfUpdater.WorldToTexPos(finger.Tip.position);
                 _fingerTipPositionCache.Add(texPos);
+                if (alpha>0f)
+                    _fingerTipDeltaPositionCache.Add((texPos - prevPos).magnitude);
+                prevPos = texPos;
                 if (fingerTipPositionIndicatorPrefab)
                 {
                     Instantiate(fingerTipPositionIndicatorPrefab, finger.Tip.position, Quaternion.identity, transform);
                 }
             }
+            _fingerTipDeltaPositionCache.Add(0); // finger bent at 100% doesnt move
         }
         
         Debug.Log($"PrepareFingerTipPositionCache: final positions count {_fingerTipPositionCache.Count}");
@@ -60,40 +71,57 @@ public class SDFHand : BaseHand
         //_fingerTipResult = new float[_fingerTipPositionCache.Count];
     }
 
+    private float FineTuneFinger(float delta, float voxelValue)
+    {
+        return (voxelValue-minTipDistance) * mull / delta * alphaStep;
+    }
+    
     protected override void CloseHand2()
     {
         StartWatch();
 
         var output = sdfUpdater.RunSampler();
-        StopWatch(); StartWatch();
+        StopWatch("running sampler"); StartWatch();
         AsyncGPUReadback.Request(output, request =>
         {
-            StopWatch(); StartWatch();
+            if (!Application.isPlaying) // FIX for GPU callback running after stopping app in unity editor
+                return;
+            
+            StopWatch("GPU readback"); StartWatch();
             // OpenHand();
             var resultArr = request.GetData<float>();
             var alpha = 0f;
             var stopped = false;
             var eFinger = fingers.GetEnumerator();
             eFinger.MoveNext();
+
+            var eDelta = _fingerTipDeltaPositionCache.GetEnumerator();
+            var prevDelta = 0f;
             foreach (var result in resultArr)
             {
-                if (!stopped && result < minTipDistance)
+                eDelta.MoveNext();
+                if (!stopped && result < minTipDistance
+                             && (!fineTune || alpha > alphaStep) // this is needed for finger to move even a bit into the surface for it to comeback
+                             ) 
                 {
                     stopped = true;
-                    ((Finger)eFinger.Current).Squish = alpha;
+                    ((Finger)eFinger.Current).Squish = alpha + (fineTune ? FineTuneFinger(eDelta.Current, result) : 0);
                 }
             
+                prevDelta = eDelta.Current;
                 alpha += alphaStep;
                 if (alpha > 1.0f)
                 {
                     if (!stopped)
                         ((Finger)eFinger.Current).Squish = 1f;
                     alpha = 0;
+                    prevDelta = 0;
                     stopped = false;
                     eFinger.MoveNext();
                 }
             }
-            StopWatch();
+
+            StopWatch("parsing results");
         });
 
         // var e = _fingerTipResult.GetEnumerator();
