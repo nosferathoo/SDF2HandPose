@@ -6,7 +6,9 @@ It can be compared with physics based hand posing using PhysicsHand script.
 
 Run SampleScene, position entire hand object over 3D rigidbody (any kind, with any collider, with layer==Grabbable),
 tap **Close Hand** button in SDFHand script. **Toggle interactive update** will enable continous autograsping pose.
+
 **Fine tune** option will turn on finetuning of the grasp using last SDF sample.
+
 Turning on Animator component will enable animation of hand moving on the spine of Dragon Model - if turned
 on with **Toggle interactive update** will result in dragon petting :)
 
