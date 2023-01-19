@@ -5,12 +5,19 @@ Currently it only works using editor buttons on SDFHand script just to show off.
 It can be compared with physics based hand posing using PhysicsHand script.
 
 Run SampleScene, position entire hand object over 3D rigidbody (any kind, with any collider, with layer==Grabbable),
-tap Close Hand button in SDFHand script.
+tap **Close Hand** button in SDFHand script. **Toggle interactive update** will enable continous autograsping pose.
+**Fine tune** option will turn on finetuning of the grasp using last SDF sample.
+Turning on Animator component will enable animation of hand moving on the spine of Dragon Model - if turned
+on with **Toggle interactive update** will result in dragon petting :)
 
-![SDF2HandPose](https://user-images.githubusercontent.com/2834098/183507555-11756449-e3fa-4969-9877-a653fc98e9f4.gif)
+![Nice dragon](https://media.githubusercontent.com/media/nosferathoo/SDF2HandPose/main/DragonPetting2.gif)
+
+**Update 19.01.2023**
+* added additional SIGGRAPH's Pixel model
+* added finetuning of grasp using last SDF sample 
 
 **Updates 9.12.2022**
-* project now uses Mesh-To-SDF unity package for fast SDF probe ( https://github.com/Unity-Technologies/com.unity.demoteam.mesh-to-sdf )
+* project now uses Mesh-To-SDF unity package for fast SDF computation ( https://github.com/Unity-Technologies/com.unity.demoteam.mesh-to-sdf )
 * Finger tips' possible positions mapped to SDF texture coords are cached
 * SDF is no longer sliced to create Texture3D from RenderTexture instead it's sampled along all fingers possible positions during bending straight on GPU using ComputeShader
 * Sampled data is retrieved from GPU using async call and processed when ready to not stall the app
