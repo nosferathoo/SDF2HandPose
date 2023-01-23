@@ -12,7 +12,15 @@ tap **Close Hand** button in SDFHand script. **Toggle interactive update** will 
 Turning on Animator component will enable animation of hand moving on the spine of Dragon Model - if turned
 on with **Toggle interactive update** will result in dragon petting :)
 
+**Work in Progress** SDFMagnet script allows to test reach-to-grasp using SDF - requires that target mesh MeshToSDF
+set with bigger Flood steps number
+
 ![Nice dragon](https://media.githubusercontent.com/media/nosferathoo/SDF2HandPose/main/DragonPetting2.gif)
+
+**Update 23.01.2023**
+* code cleanup
+* SDFMagnet - reach-to-grasp work in progress script
+* Additional SDF sampler with normals calculation using Tetrahedron technique
 
 **Update 19.01.2023**
 * added additional SIGGRAPH's Pixel model
