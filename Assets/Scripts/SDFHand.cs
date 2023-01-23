@@ -9,6 +9,7 @@ public class SDFHand : BaseHand
     [SerializeField] private float alphaStep = 0.01f;
     [SerializeField] private float minTipDistance = 0.01f;
     [SerializeField] private SDFUpdater sdfUpdater;
+    [SerializeField] private SDFSampler sdfSampler;
     
     [SerializeField] private GameObject fingerTipPositionIndicatorPrefab;
 
@@ -66,8 +67,8 @@ public class SDFHand : BaseHand
         
         Debug.Log($"PrepareFingerTipPositionCache: final positions count {_fingerTipPositionCache.Count}");
         OpenHand();
-        sdfUpdater.SetupSampler(_fingerTipPositionCache.Count);
-        sdfUpdater.SetSamplerData(_fingerTipPositionCache);
+        sdfSampler.SetupSampler(sdfUpdater.renderTexture, _fingerTipPositionCache.Count);
+        sdfSampler.SetSamplerData(_fingerTipPositionCache);
         //_fingerTipResult = new float[_fingerTipPositionCache.Count];
     }
 
@@ -80,7 +81,7 @@ public class SDFHand : BaseHand
     {
         StartWatch();
 
-        var output = sdfUpdater.RunSampler();
+        var output = sdfSampler.RunSampler();
         StopWatch("running sampler"); StartWatch();
         AsyncGPUReadback.Request(output, request =>
         {

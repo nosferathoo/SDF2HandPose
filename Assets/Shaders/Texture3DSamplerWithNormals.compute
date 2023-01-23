@@ -1,0 +1,22 @@
+#pragma kernel CSMain
+
+Texture3D<float4> Voxels;
+SamplerState samplerVoxels;
+StructuredBuffer<float3> Positions;
+RWStructuredBuffer<float4> Results;  
+
+#define F(x) Voxels.SampleLevel(samplerVoxels,x,0).r
+
+[numthreads(64,1,1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    const float3 pos = Positions[id.x];
+    ;
+    const float h = 0.0625; // 1/16th
+    const float2 k = float2(1,-1);
+    Results[id.x] = float4( normalize( k.xyy*F( pos + k.xyy*h ) + 
+                      k.yyx*F( pos + k.yyx*h ) + 
+                      k.yxy*F( pos + k.yxy*h ) + 
+                      k.xxx*F( pos + k.xxx*h )), F( pos ) );
+    
+} 
