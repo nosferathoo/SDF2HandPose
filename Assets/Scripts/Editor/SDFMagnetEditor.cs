@@ -15,9 +15,19 @@ public class SDFMagnetEditor : Editor
 
         if (magnet)
         {
-            if(GUILayout.Button("Use magnet"))
+            if(GUILayout.Button("Step"))
             {
-                magnet.Use();
+                magnet.Step();
+            }
+            
+            if(GUILayout.Button("Approach and autograsp"))
+            {
+                magnet.ApproachAndGrasp();
+            }
+
+            if(GUILayout.Button("Repeat approach and autograsp"))
+            {
+                magnet.ApproachAndGraspAndRepeat();
             }
         }
     }
