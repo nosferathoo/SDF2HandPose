@@ -63,9 +63,7 @@ public class SDFMagnet : MonoBehaviour
                 if (normal.sqrMagnitude > 0)
                 {
                     normal = transform.TransformDirection(normal);
-                    //var tmp = transform.right;
-                    //transform.up = normal;
-                    //transform.right = tmp;
+ 
                     transform.rotation = Quaternion.Lerp(transform.rotation,
                         Quaternion.LookRotation(normal,-transform.forward)*Quaternion.Euler(90,0,0),
                         .5f);
