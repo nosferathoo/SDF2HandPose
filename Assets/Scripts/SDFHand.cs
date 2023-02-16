@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -23,7 +24,7 @@ public class SDFHand : BaseHand
 
     private void OnValidate()
     {
-        fingers = GetComponentsInChildren<Finger>();
+        fingers = GetComponentsInChildren<Finger>().Where(finger => finger is not FingerPart).ToArray();
     }
 
     public override void OpenHand()

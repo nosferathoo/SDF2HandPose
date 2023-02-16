@@ -11,10 +11,9 @@ public class SDFSampler : MonoBehaviour
     
     public void SetupSampler(RenderTexture renderTexture, int pointsCount, int resultSize = 1)
     {
-
         _samplerKernelIndex = sampler.FindKernel("CSMain");
         sampler.GetKernelThreadGroupSizes(_samplerKernelIndex, out _samplerThreadGroupSize, out _, out _);
-        Debug.Log($"SetupSampler: samplerThreadGroupSize={_samplerThreadGroupSize}");
+        Debug.Log($"SetupSampler: samplerThreadGroupSize={_samplerThreadGroupSize}, pointsToSample={pointsCount}");
 
         _samplerPositionsBuffer = new ComputeBuffer(pointsCount, sizeof(float) * 3);
         _samplerResultsBuffer = new ComputeBuffer(pointsCount, sizeof(float) * resultSize);

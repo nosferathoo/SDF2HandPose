@@ -30,7 +30,7 @@ public abstract class BaseHand : MonoBehaviour
 
     public IEnumerator InteractiveUpdate()
     {
-        var weof = new WaitForSeconds(.05f);
+        var weof = new WaitForSeconds(.1f);
         while (true)
         {
             CloseHand();
