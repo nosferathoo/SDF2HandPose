@@ -29,11 +29,13 @@ public class Finger : MonoBehaviour
         }
     }
 
+    public int ChainLength => chainLength;
+
     // Start is called before the first frame update
     void Start()
     {
         var t = transform;
-        for (var i = 0; i < chainLength; ++i)
+        for (var i = 0; i < ChainLength; ++i)
         {
             originalRotations.Add(t, t.localRotation);
             if (t.childCount == 0)
