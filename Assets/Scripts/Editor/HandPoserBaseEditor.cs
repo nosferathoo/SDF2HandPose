@@ -5,6 +5,7 @@ using UnityEngine;
 [CustomEditor(typeof(HandPoserBase))]
 public class HandPoserBaseEditor : Editor
 {
+    private float _squish = 0;
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
@@ -27,5 +28,14 @@ public class HandPoserBaseEditor : Editor
         {
             poser.Squish = 1;
         }
+        
+        GUILayout.Label("Squish test:");
+        var newSquish = GUILayout.HorizontalSlider(_squish, 0f, 1f); 
+        if (Mathf.Abs(newSquish - _squish)>0.001f)
+        {
+            poser.Squish = _squish = newSquish;
+        }
+
+        GUILayout.Space(20);
     }
 }
