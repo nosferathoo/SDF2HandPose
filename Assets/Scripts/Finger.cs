@@ -1,18 +1,16 @@
 using NaughtyAttributes;
-using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteInEditMode]
+[ExecuteAlways]
 public class Finger : MonoBehaviour
 {
-    private const float MaxSquishAngle = 90f;
     [SerializeField] private int chainLength = 3;
-    [OnValueChanged("OnSquishChangeCallback")]
+    [OnValueChanged("OnSquishChangeCallback")] [Range(0,1)]
     [SerializeField] private float squish = 0f;
     [SerializeField] private Transform tip;
-    
-    private Dictionary<Transform,Quaternion> originalRotations = new Dictionary<Transform, Quaternion>();
 
+    private HandPoserBase _poser;
+    
     public Transform Tip => tip;
 
     public float Squish
@@ -21,27 +19,16 @@ public class Finger : MonoBehaviour
         set
         {
             squish = value;
-            var q = Quaternion.Euler(0,0,-MaxSquishAngle * Mathf.Clamp01(Squish));
-            foreach (var pair in originalRotations)
-            {
-                pair.Key.localRotation = pair.Value * q;
-            }
+            _poser.SquishFinger(this, value);
         }
     }
 
     public int ChainLength => chainLength;
 
-    // Start is called before the first frame update
-    void Start()
+    public HandPoserBase Poser
     {
-        var t = transform;
-        for (var i = 0; i < ChainLength; ++i)
-        {
-            originalRotations.Add(t, t.localRotation);
-            if (t.childCount == 0)
-                break;
-            t = t.GetChild(0);
-        }
+        get => _poser;
+        set => _poser = value;
     }
 
     private void OnSquishChangeCallback()

@@ -1,25 +1,40 @@
-using System.Collections.Generic;
 using NaughtyAttributes;
+using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 /**
  * HandPoserBase class holds open and close poses, can also record poses
- * holds info about Finger class that bends chain of bones
+ * and holds info about Finger class that bends chain of bones
  */
-[ExecuteInEditMode]
+[ExecuteAlways]
 public class HandPoserBase : MonoBehaviour
 {
     [SerializeField] private Finger[] fingers;
     [SerializeField] private HandPose openPose, closedPose;
-    [OnValueChanged("OnSquishChangeCallback")]
-    [SerializeField] private float squish = 0f;
+    [OnValueChanged("OnBaseSquishChangeCallback")] [Range(0,1)]
     private Dictionary<Finger, int> _fingerLookUp = new();
+
+    private float _squish = 0f;
+    public float Squish
+    {
+        get => _squish;
+        set
+        {
+            _squish = value;
+            foreach(var finger in Fingers) SquishFinger(finger, value);
+        }
+    }
+
+    public Finger[] Fingers => fingers;
 
     private void Start()
     {
-        for (var i = 0; i < fingers.Length; ++i)
+        _fingerLookUp.Clear();
+        for (var i = 0; i < Fingers.Length; ++i)
         {
-            _fingerLookUp.Add(fingers[i],i);
+            _fingerLookUp.Add(Fingers[i],i);
+            Fingers[i].Poser = this;
         }
     }
 
@@ -30,18 +45,19 @@ public class HandPoserBase : MonoBehaviour
 
     public void RecordPose(HandPose pose)
     {
-        pose.positions = new Vector3[fingers.Length][];
-        pose.rotations = new Quaternion[fingers.Length][];
-        for (var i = 0; i < fingers.Length; ++i)
+        EditorUtility.SetDirty(pose);
+        pose.fingerStates = new HandPose.Record[Fingers.Length];
+        for (var i = 0; i < Fingers.Length; ++i)
         {
-            var finger = fingers[i];
-            pose.positions[i] = new Vector3[finger.ChainLength];
-            pose.rotations[i] = new Quaternion[finger.ChainLength];
+            var finger = Fingers[i];
+            var fingerState = pose.fingerStates[i] = new HandPose.Record();
+            fingerState.positions = new Vector3[finger.ChainLength];
+            fingerState.rotations = new Quaternion[finger.ChainLength];
             var tr = finger.transform;
             for (var j = 0; j < finger.ChainLength; ++j)
             {
-                pose.positions[i][j] = tr.localPosition;
-                pose.rotations[i][j] = tr.localRotation;
+                fingerState.positions[j] = tr.localPosition;
+                fingerState.rotations[j] = tr.localRotation;
                 if (tr.childCount > 0)
                 {
                     tr = tr.GetChild(0);
@@ -52,14 +68,15 @@ public class HandPoserBase : MonoBehaviour
 
     public void SetPose(HandPose pose)
     {
-        for (var i = 0; i < fingers.Length; ++i)
+        for (var i = 0; i < Fingers.Length; ++i)
         {
-            var finger = fingers[i];
+            var finger = Fingers[i];
+            var fingerState = pose.fingerStates[i];
             var tr = finger.transform;
             for (var j = 0; j < finger.ChainLength; ++j)
             {
-                tr.localPosition = pose.positions[i][j];
-                tr.localRotation = pose.rotations[i][j];
+                tr.localPosition = fingerState.positions[j];
+                tr.localRotation = fingerState.rotations[j];
                 if (tr.childCount > 0)
                 {
                     tr = tr.GetChild(0);
@@ -68,28 +85,47 @@ public class HandPoserBase : MonoBehaviour
         }
     }
 
-    public void BlendPose(HandPose pose1, HandPose pose2, float t)
+    private void InternalBlend(Finger finger, HandPose.Record fingerState1, HandPose.Record fingerState2, float t)
     {
-        for (var i = 0; i < fingers.Length; ++i)
+        var tr = finger.transform;
+        for (var j = 0; j < finger.ChainLength; ++j)
         {
-            var finger = fingers[i];
-            var tr = finger.transform;
-            for (var j = 0; j < finger.ChainLength; ++j)
+            tr.localPosition = Vector3.Lerp(fingerState1.positions[j], fingerState2.positions[j], t);
+            tr.localRotation = Quaternion.Lerp(fingerState1.rotations[j], fingerState2.rotations[j], t);
+            if (tr.childCount > 0)
             {
-                tr.localPosition = Vector3.Lerp(pose1.positions[i][j], pose2.positions[i][j], t);
-                tr.localRotation = Quaternion.Lerp(pose1.rotations[i][j], pose2.rotations[i][j], t);
-                if (tr.childCount > 0)
-                {
-                    tr = tr.GetChild(0);
-                }
+                tr = tr.GetChild(0);
             }
         }
     }
     
-    private void OnSquishChangeCallback()
+    public void SquishFinger(Finger finger, float t)
+    {
+        var i = _fingerLookUp[finger];
+        var fingerState1 = openPose.fingerStates[i];
+        var fingerState2 = closedPose.fingerStates[i];
+        InternalBlend(finger,fingerState1,fingerState2,t);
+    }
+
+    // public void BlendPose(HandPose pose1, HandPose pose2, float t)
+    // {
+    //     foreach (var finger in fingers)
+    //     {
+    //         SquishFinger(finger, t);
+    //     }
+    //     // for (var i = 0; i < fingers.Length; ++i)
+    //     // {
+    //     //     var finger = fingers[i];
+    //     //     var fingerState1 = pose1.fingerStates[i];
+    //     //     var fingerState2 = pose2.fingerStates[i];
+    //     //     InternalBlend(finger,fingerState1,fingerState2,t);
+    //     // }
+    // }
+    
+    private void OnBaseSquishChangeCallback()
     {
         if (!openPose || !closedPose) return;
-        BlendPose(openPose, closedPose, squish);
+        Squish = _squish;
     }
 
     public void SaveOpenPose()
@@ -100,15 +136,5 @@ public class HandPoserBase : MonoBehaviour
     public void SaveClosedPose()
     {
         RecordPose(closedPose);
-    }
-
-    public void OpenPose()
-    {
-        SetPose(openPose);
-    }
-
-    public void ClosedPose()
-    {
-        SetPose(closedPose);
     }
 }

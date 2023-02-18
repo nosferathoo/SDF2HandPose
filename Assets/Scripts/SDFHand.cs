@@ -5,7 +5,6 @@ using UnityEngine.Rendering;
 
 public class SDFHand : BaseHand
 {
-    [SerializeField] private Finger[] fingers;
     [SerializeField] private float alphaStep = 0.01f;
     [SerializeField] private float minTipDistance = 0.01f;
     [SerializeField] private SDFUpdater sdfUpdater;
@@ -19,20 +18,6 @@ public class SDFHand : BaseHand
     private List<Vector3> _fingerTipPositionCache = new List<Vector3>();
 
     private List<float> _fingerTipDeltaPositionCache = new List<float>();
-    //private float[] _fingerTipResult;
-
-    private void OnValidate()
-    {
-        fingers = GetComponentsInChildren<Finger>();
-    }
-
-    public override void OpenHand()
-    {
-        foreach (var finger in fingers)
-        {  
-            finger.Squish = 0;
-        }
-    }
 
     private void Start()
     {
@@ -45,7 +30,7 @@ public class SDFHand : BaseHand
         OpenHand();
         
         var prevPos = Vector3.zero;
-        foreach (var finger in fingers)
+        foreach (var finger in Poser.Fingers)
         {
             
             for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
@@ -93,7 +78,7 @@ public class SDFHand : BaseHand
             var resultArr = request.GetData<float>();
             var alpha = 0f;
             var stopped = false;
-            var eFinger = fingers.GetEnumerator();
+            var eFinger = Poser.Fingers.GetEnumerator();
             eFinger.MoveNext();
 
             var eDelta = _fingerTipDeltaPositionCache.GetEnumerator();

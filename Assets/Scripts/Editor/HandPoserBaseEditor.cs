@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿using NaughtyAttributes;
+using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(HandPoserBase))]
@@ -20,11 +21,11 @@ public class HandPoserBaseEditor : Editor
         }
         if(GUILayout.Button("Show open pose"))
         {
-            poser.OpenPose();
+            poser.Squish = 0;
         }
         if(GUILayout.Button("Show closed pose"))
         {
-            poser.ClosedPose();
+            poser.Squish = 1;
         }
     }
 }

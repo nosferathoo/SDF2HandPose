@@ -1,13 +1,23 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using UnityEngine;
 
 public abstract class BaseHand : MonoBehaviour
 {
+    [SerializeField] protected HandPoserBase Poser;
     protected System.Diagnostics.Stopwatch _watch = new System.Diagnostics.Stopwatch();
 
+    private void OnValidate()
+    {
+        Poser = GetComponent<HandPoserBase>();
+    }
+
     [HideInInspector] public Coroutine interactiveUpdate;
-    
-    public abstract void OpenHand();
+
+    public void OpenHand()
+    {
+        Poser.Squish = 0;
+    }
 
     protected void StartWatch()
     {

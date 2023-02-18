@@ -983,7 +983,9 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: e13b1b5b6434c476186f9ac5bfe81d9a, type: 2}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 114417840974862690, guid: e201a24a09e942042b93390d0444d728, type: 3}
+    - {fileID: 114460394679914766, guid: e201a24a09e942042b93390d0444d728, type: 3}
   m_SourcePrefab: {fileID: 100100000, guid: e201a24a09e942042b93390d0444d728, type: 3}
 --- !u!4 &3325392386204013683 stripped
 Transform:
@@ -1163,12 +1165,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75b33e36c74e1874ea32f90aeee4cc3a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fingers:
-  - {fileID: 1510349599}
-  - {fileID: 692231685}
-  - {fileID: 209255281}
-  - {fileID: 1979213949}
-  - {fileID: 647535454}
   alphaStep: 0.05
   tipRadius: 0.01
   layerMask:
