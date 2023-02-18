@@ -4,12 +4,12 @@ using UnityEngine;
 
 public abstract class BaseHand : MonoBehaviour
 {
-    [SerializeField] protected HandPoserBase Poser;
+    [SerializeField] protected HandPoser Poser;
     protected System.Diagnostics.Stopwatch _watch = new System.Diagnostics.Stopwatch();
 
     private void OnValidate()
     {
-        Poser = GetComponent<HandPoserBase>();
+        Poser = GetComponent<HandPoser>();
     }
 
     [HideInInspector] public Coroutine interactiveUpdate;
