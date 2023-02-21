@@ -19,14 +19,14 @@ public class SDFHand : BaseHand
 
     private List<float> _fingerTipDeltaPositionCache = new List<float>();
 
-    private void Start()
-    {
-        StartCoroutine(PrepareFingerTipPositionCache());
-    }
-    
-    private IEnumerator PrepareFingerTipPositionCache()
+    private IEnumerator Start()
     {
         yield return new WaitForEndOfFrame();
+        PrepareFingerTipPositionCache();
+    }
+    
+    private void PrepareFingerTipPositionCache()
+    {
         OpenHand();
         
         var prevPos = Vector3.zero;
@@ -36,7 +36,7 @@ public class SDFHand : BaseHand
             for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
             {
                 finger.Squish = alpha;
-                yield return new WaitForEndOfFrame();
+
                 var texPos = sdfUpdater.WorldToTexPos(finger.Tip.position);
                 _fingerTipPositionCache.Add(texPos);
                 if (alpha>0f)
