@@ -15,7 +15,7 @@ public class MultiPhaseHandPoser : HandPoserBase
 
     private void OnValidate()
     {
-        fingers = GetComponentsInChildren<FingerBase>().Where(f=>f is FingerPart).ToArray();
+        fingers = root.GetComponentsInChildren<FingerBase>().Where(f=>f is FingerPart).ToArray();
         phaseCount = fingers.Max(part => ((FingerPart)part).Phase) + 1;
     }
 

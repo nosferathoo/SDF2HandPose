@@ -13,7 +13,7 @@ public class HandPoser : HandPoserBase
 {
     private void OnValidate()
     {
-        fingers = GetComponentsInChildren<FingerBase>().Where(f => f is Finger).ToArray();
+        fingers = root.GetComponentsInChildren<FingerBase>().Where(f => f is Finger).ToArray();
     }
 
 

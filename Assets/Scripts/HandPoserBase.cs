@@ -6,6 +6,7 @@ using UnityEngine;
 [ExecuteAlways]
 public class HandPoserBase : MonoBehaviour
 {
+    [SerializeField] protected Transform root;
     [SerializeField] protected FingerBase[] fingers;
     [SerializeField] private HandPose openPose, closedPose;
     [OnValueChanged("OnBaseSquishChangeCallback")] [Range(0,1)]

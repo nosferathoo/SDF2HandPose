@@ -11,7 +11,7 @@ public class MultiPhaseSDFHand : BaseHand
     [SerializeField] private float minTipDistance = 0.01f;
     [SerializeField] private SDFUpdater sdfUpdater;
     [SerializeField] private SDFSampler sdfSampler;
-    
+    [SerializeField] private MultiPhaseHandPoser phantomPoser;
     [SerializeField] private bool fineTune = false;
     [SerializeField] private float mull = 1f;
     
@@ -35,7 +35,7 @@ public class MultiPhaseSDFHand : BaseHand
         _fingerTipPositionCache.Clear();
         _fingerTipDeltaPositionCache.Clear();
         
-        foreach (var fingerPart in MultiPhaseHandPoser.FingerPartsPerPhase[phase])
+        foreach (var fingerPart in phantomPoser.FingerPartsPerPhase[phase])
         {
             for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
             {
@@ -85,7 +85,7 @@ public class MultiPhaseSDFHand : BaseHand
             Debug.Log($"Sampler result array length {resultArr.Length}");
             var alpha = 0f;
             var stopped = false;
-            var eFinger = MultiPhaseHandPoser.FingerPartsPerPhase[phase].GetEnumerator();
+            var eFinger = phantomPoser.FingerPartsPerPhase[phase].GetEnumerator();
             eFinger.MoveNext();
             var currentFingerPart = (FingerPart) eFinger.Current;
 
@@ -115,7 +115,18 @@ public class MultiPhaseSDFHand : BaseHand
                 }
             }
 
-            await UniTask.NextFrame();
+            //await UniTask.NextFrame();
+
+        }
+
+        // copy pose from phantom
+        {
+            var eFinger = Poser.Fingers.GetEnumerator();
+            var eFinger2 = phantomPoser.Fingers.GetEnumerator();
+            while (eFinger.MoveNext() && eFinger2.MoveNext())
+            {
+                ((FingerBase) eFinger.Current).Squish = ((FingerBase) eFinger2.Current).Squish;
+            }
         }
         StopWatch("Multiphase bending");
     }
