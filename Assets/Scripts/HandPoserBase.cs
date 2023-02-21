@@ -1,19 +1,14 @@
-using NaughtyAttributes;
 using System.Collections.Generic;
+using NaughtyAttributes;
 using UnityEditor;
 using UnityEngine;
 
-/**
- * HandPoserBase class holds open and close poses, can also record poses
- * and holds info about Finger class that bends chain of bones
- */
-[ExecuteAlways]
 public class HandPoserBase : MonoBehaviour
 {
-    [SerializeField] private Finger[] fingers;
+    [SerializeField] protected FingerBase[] fingers;
     [SerializeField] private HandPose openPose, closedPose;
     [OnValueChanged("OnBaseSquishChangeCallback")] [Range(0,1)]
-    private Dictionary<Finger, int> _fingerLookUp = new();
+    private Dictionary<FingerBase, int> _fingerLookUp = new();
 
     private float _squish = 0f;
     public float Squish
@@ -26,9 +21,9 @@ public class HandPoserBase : MonoBehaviour
         }
     }
 
-    public Finger[] Fingers => fingers;
+    public FingerBase[] Fingers => fingers;
 
-    private void Start()
+    protected virtual void Start()
     {
         _fingerLookUp.Clear();
         for (var i = 0; i < Fingers.Length; ++i)
@@ -38,11 +33,7 @@ public class HandPoserBase : MonoBehaviour
         }
     }
 
-    private void OnValidate()
-    {
-        fingers = GetComponentsInChildren<Finger>();
-    }
-
+    #if UNITY_EDITOR
     public void RecordPose(HandPose pose)
     {
         EditorUtility.SetDirty(pose);
@@ -65,6 +56,7 @@ public class HandPoserBase : MonoBehaviour
             }
         }
     }
+    #endif
 
     public void SetPose(HandPose pose)
     {
@@ -84,8 +76,8 @@ public class HandPoserBase : MonoBehaviour
             }
         }
     }
-
-    private void InternalBlend(Finger finger, HandPose.Record fingerState1, HandPose.Record fingerState2, float t)
+    
+    private void InternalBlend(FingerBase finger, HandPose.Record fingerState1, HandPose.Record fingerState2, float t)
     {
         var tr = finger.transform;
         for (var j = 0; j < finger.ChainLength; ++j)
@@ -99,7 +91,7 @@ public class HandPoserBase : MonoBehaviour
         }
     }
     
-    public void SquishFinger(Finger finger, float t)
+    public void SquishFinger(FingerBase finger, float t)
     {
         var i = _fingerLookUp[finger];
         var fingerState1 = openPose.fingerStates[i];
@@ -107,21 +99,6 @@ public class HandPoserBase : MonoBehaviour
         InternalBlend(finger,fingerState1,fingerState2,t);
     }
 
-    // public void BlendPose(HandPose pose1, HandPose pose2, float t)
-    // {
-    //     foreach (var finger in fingers)
-    //     {
-    //         SquishFinger(finger, t);
-    //     }
-    //     // for (var i = 0; i < fingers.Length; ++i)
-    //     // {
-    //     //     var finger = fingers[i];
-    //     //     var fingerState1 = pose1.fingerStates[i];
-    //     //     var fingerState2 = pose2.fingerStates[i];
-    //     //     InternalBlend(finger,fingerState1,fingerState2,t);
-    //     // }
-    // }
-    
     private void OnBaseSquishChangeCallback()
     {
         if (!openPose || !closedPose) return;
