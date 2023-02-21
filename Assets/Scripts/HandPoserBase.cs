@@ -3,6 +3,7 @@ using NaughtyAttributes;
 using UnityEditor;
 using UnityEngine;
 
+[ExecuteAlways]
 public class HandPoserBase : MonoBehaviour
 {
     [SerializeField] protected FingerBase[] fingers;

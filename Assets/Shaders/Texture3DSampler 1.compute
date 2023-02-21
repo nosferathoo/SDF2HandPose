@@ -1,0 +1,13 @@
+#pragma kernel CSMain
+
+Texture3D<float4> Voxels;
+SamplerState samplerVoxels;
+StructuredBuffer<float3> Positions;
+RWStructuredBuffer<float> Results;  
+
+[numthreads(64,1,1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    const float3 pos = Positions[id.x];
+    Results[id.x] = Voxels.SampleLevel(samplerVoxels,pos,0).r;
+} 

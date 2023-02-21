@@ -12,7 +12,7 @@ public class FingerPart : FingerBase
     {
         if (Phase == -1)
         {
-            phase = GetComponentsInParent<FingerPart>().Length;
+            phase = GetComponentsInParent<FingerPart>().Length-1;
         }
     }
 }

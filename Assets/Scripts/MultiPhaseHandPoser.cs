@@ -1,12 +1,17 @@
 ﻿using System.Linq;
 using UnityEngine;
 
+[ExecuteAlways]
 public class MultiPhaseHandPoser : HandPoserBase
 {
     [SerializeField] private int phaseCount;
     
     // per phase lookup
     private FingerPart[][] _fingerPartsPerPhase;
+
+    public FingerPart[][] FingerPartsPerPhase => _fingerPartsPerPhase;
+
+    public int PhaseCount => phaseCount;
 
     private void OnValidate()
     {
@@ -16,10 +21,11 @@ public class MultiPhaseHandPoser : HandPoserBase
 
     private void Awake()
     {
-        _fingerPartsPerPhase = new FingerPart[phaseCount][];
-        for (var i = 0; i <= phaseCount; ++i)
+        _fingerPartsPerPhase = new FingerPart[PhaseCount][];
+        for (var i = 0; i < PhaseCount; ++i)
         {
-            _fingerPartsPerPhase[i] = (FingerPart[]) fingers.Where(part => ((FingerPart) part).Phase == i).ToArray();
+            _fingerPartsPerPhase[i] = fingers.Select(fb => fb as FingerPart).Where(part => part.Phase == i).ToArray();
+            Debug.Log($"Finger parts in phase {i} = {FingerPartsPerPhase[i].Length}");
         }
     }
 }

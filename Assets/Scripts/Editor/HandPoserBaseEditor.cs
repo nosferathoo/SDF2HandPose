@@ -2,15 +2,15 @@
 using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(HandPoser))]
-public class HandPoserEditor : Editor
+[CustomEditor(typeof(HandPoserBase),true)]
+public class HandPoserBaseEditor : Editor
 {
     private float _squish = 0;
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
         
-        var poser = target as HandPoser;
+        var poser = target as HandPoserBase;
 
         if(GUILayout.Button("Save open pose"))
         {
