@@ -37,10 +37,14 @@ public class MultiPhaseSDFHand : BaseHand
         
         foreach (var fingerPart in phantomPoser.FingerPartsPerPhase[phase])
         {
-            for (var alpha = 0f; alpha < 1f; alpha += alphaStep)
+            (float from, float to, float step) = fingerPart.Direction switch
+            {
+                true => (1,0,-alphaStep),
+                _ => (0,1,alphaStep)
+            };
+            for (var alpha = from; Mathf.Abs(alpha-to) > 0.00001f; alpha += step)
             {
                 fingerPart.Squish = alpha;
-                // yield return new WaitForEndOfFrame();
                 var texPos = sdfUpdater.WorldToTexPos(fingerPart.Tip.position);
                 _fingerTipPositionCache.Add(texPos);
                 if (alpha>0f)
@@ -93,21 +97,23 @@ public class MultiPhaseSDFHand : BaseHand
             foreach (var result in resultArr)
             {
                 eDelta.MoveNext();
-                if (!stopped && result < minTipDistance
+                if (!stopped && 
+                    ((result < minTipDistance && !currentFingerPart.Direction) || (result > minTipDistance && currentFingerPart.Direction))
                              && (!fineTune ||
                                  alpha >
                                  alphaStep) // this is needed for finger to move even a bit into the surface for it to comeback
                    )
                 {
                     stopped = true;
-                    currentFingerPart.Squish = alpha + (fineTune ? FineTuneFinger(eDelta.Current, result) : 0);
+                    var newSquish = alpha + (fineTune ? FineTuneFinger(eDelta.Current, result) : 0);
+                    currentFingerPart.Squish = currentFingerPart.Direction ? 1f-newSquish : newSquish;
                 }
 
                 alpha += alphaStep;
                 if (alpha > 1.0f)
                 {
                     if (!stopped)
-                        currentFingerPart.Squish = 1f;
+                        currentFingerPart.Squish = currentFingerPart.Direction ? 0f : 1f;
                     alpha = 0;
                     stopped = false;
                     if (eFinger.MoveNext())

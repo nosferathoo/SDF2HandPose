@@ -8,6 +8,8 @@ public class FingerPart : FingerBase
 
     public int Phase => phase;
 
+    public bool Direction => direction;
+
     private void OnValidate()
     {
         if (Phase == -1)
