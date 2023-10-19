@@ -4,6 +4,16 @@ Proof-of-concept project showing usage of SDF 3D texture as input for VR Hand Po
 Currently it only works using editor buttons on SDFHand script just to show off.
 It can be compared with physics based hand posing using PhysicsHand script.
 
+## Citation
+
+This code is a part of my work **Autograsping pose of virtual hand model using the Signed Distance Field real-time sampling with fine-tuning**.
+If you want to use it please consider citing:
+```
+@article{Puchalski2023,title = {Autograsping pose of virtual hand model using the Signed Distance Field real-time sampling with fine-tuning},journal = {Computer Science Research Notes},year = {2023},volume = {31},number = {1-2},pages = {232-240},author = {Puchalski, M. and Woźna-Szcześniak, B.}} 
+```
+
+## Running
+
 Run SampleScene, position entire hand object over 3D rigidbody (any kind, with any collider, with layer==Grabbable),
 tap **Close Hand** button in SDFHand script. **Toggle interactive update** will enable continous autograsping pose.
 
